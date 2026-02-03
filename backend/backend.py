@@ -319,28 +319,15 @@ class GestoreBigData:
         # Step 1: Converti in minuscolo
         df_neg = df_neg.withColumn("review_lower", lower(col("Negative_Review")))
         
-        # Step 2: Rimuovi TUTTO tranne lettere e spazi (elimina *, -, numeri, ecc.)
-        df_neg = df_neg.withColumn("Negative_Review_Clean", 
-                                   regexp_replace(col("review_lower"), r'[^a-z\s]', ' '))
+        from pyspark.ml.feature import RegexTokenizer
         
-        # Step 3: Rimuovi spazi multipli
-        df_neg = df_neg.withColumn("Negative_Review_Clean",
-                                   regexp_replace(col("Negative_Review_Clean"), r'\s+', ' '))
+        # SOLUZIONE ROBUSTA: Usa RegexTokenizer per estrarre SOLO parole di almeno 3 lettere
+        # pattern="[a-z]{3,}" -> Cerca sequenze di almeno 3 lettere a-z
+        # gaps=False -> Il pattern definisce i token (le parole), non i separatori
+        tokenizer = RegexTokenizer(inputCol="review_lower", outputCol="words", pattern="[a-z]{3,}", gaps=False)
         
-        
-        # Pipeline preprocessing con StopWords CUSTOM
-        tokenizer = Tokenizer(inputCol="Negative_Review_Clean", outputCol="words")
-        
-        # SOLUZIONE: Aggiungi manualmente i simboli alle stopwords
-        custom_stopwords = StopWordsRemover.loadDefaultStopWords("english") + [
-            "*", "**", "***", "****", "*****",  # Asterischi
-            "-", "--", "---", "----",             # Trattini
-            "!", "!!", "!!!",                      # Esclamativi
-            ".", "..", "...",                      # Punti
-            "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",  # Numeri
-        ]
-        
-        remover = StopWordsRemover(inputCol="words", outputCol="filtered", stopWords=custom_stopwords)
+        # StopWords standard (rimuoviamo quelle custom inutili ora)
+        remover = StopWordsRemover(inputCol="words", outputCol="filtered")
         
         # Aumentato vocabSize per catturare più termini specifici
         # minDF=10 significa: ignora parole che appaiono in meno di 10 documenti

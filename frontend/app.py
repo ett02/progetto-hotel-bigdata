@@ -45,11 +45,18 @@ if st.sidebar.button("Carica Dataset"):
         except Exception as e:
             st.error(f"Errore nel caricamento: {e}")
 
-# Tab Layout
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Esplorazione Dati (EDA)", "😊 Sentiment Analysis", "🗺️ Mappa & Clustering", "📝 Topic Modeling", "🧠 Insight Avanzati"])
+# Sidebar Navigation
+page = st.sidebar.radio(
+    "📍 Navigazione",
+    ["📊 Esplorazione Dati", "😊 Sentiment Analysis", "🗺️ Mappa & Clustering", 
+     "📝 Topic Modeling", "🧠 Insight Avanzati"]
+)
+st.sidebar.markdown("---")
 
-# TAB 1: EDA
-with tab1:
+
+
+# PAGINA 1: ESPLORAZIONE DATI
+if page == "📊 Esplorazione Dati":
     st.header("📊 Esplorazione Dati")
     
     if st.session_state.df_hotel:
@@ -99,8 +106,8 @@ with tab1:
     else:
         st.info("💡 Carica i dati dalla sidebar per iniziare l'esplorazione.")
 
-# TAB 2: SENTIMENT ANALYSIS
-with tab2:
+# PAGINA 2: SENTIMENT ANALYSIS
+elif page == "😊 Sentiment Analysis":
     st.header("😊 Sentiment Analysis (Logistic Regression)")
     st.markdown("""
     Analizziamo il **sentiment** delle recensioni Hotel usando il **Reviewer_Score** come label:
@@ -194,8 +201,8 @@ with tab2:
     else:
         st.info("Carica i dati prima di procedere.")
 
-# TAB 3: MAPPA & CLUSTERING
-with tab3:
+# PAGINA 3: MAPPA & CLUSTERING
+elif page == "🗺️ Mappa & Clustering":
     st.header("🗺️ Mappa Geografica & Clustering Intelligente")
     st.markdown("""
     **Due analisi complementari:**
@@ -231,7 +238,7 @@ with tab3:
                 sample_size = st.slider("Percentuale hotel da mostrare", 10, 100, 50, step=10,
                                        help="Ridurre per performance migliori")
             with col2:
-                min_reviews = st.number_input("Minimo recensioni", 0, 500, 50,
+                min_reviews = st.number_input("Minimo recensioni", 0, 1000, 50,
                                              help="Filtra hotel con poche recensioni")
             
             if st.button("🗺️ Mostra Mappa", type="primary"):
@@ -496,8 +503,8 @@ with tab3:
     else:
         st.info("💡 Carica i dati dalla sidebar per iniziare.")
 
-# TAB 4: TOPIC MODELING
-with tab4:
+# PAGINA 4: TOPIC MODELING
+elif page == "📝 Topic Modeling":
     st.header("📝 Topic Modeling (LDA)")
     st.markdown("""
     Scopri i **temi nascosti** nelle recensioni negative usando **Latent Dirichlet Allocation**. 
@@ -524,7 +531,7 @@ with tab4:
     
     col1, col2 = st.columns([2, 1])
     with col1:
-        num_topics = st.slider("🔢 Numero di Topic da estrarre", 2, 6, 3, help="Più topic = più granularità, ma rischio di sovrapposizione")
+        num_topics = st.slider("🔢 Numero di Topic da estrarre", 2, 10, 3, help="Più topic = più granularità, ma rischio di sovrapposizione")
     with col2:
         st.metric("🎯 Consigliato", "3-4 topic")
     
@@ -586,24 +593,22 @@ with tab4:
     else:
         st.info("💡 Carica i dati per iniziare l'analisi.")
 
-
-# TAB 5: INSIGHT AVANZATI
-with tab5:
+# PAGINA 5: INSIGHT AVANZATI
+elif page == "🧠 Insight Avanzati":
     st.header("🧠 Insight Avanzati")
     st.markdown("""
     Analisi avanzate con query Spark personalizzate per scoprire pattern nascosti nei dati.
     """)
     
     if st.session_state.df_hotel:
-        # === SELEZIONE QUERY ===
-        st.subheader("🔍 Seleziona Analisi")
+        # === SELEZIONE QUERY NEL SIDEBAR ===
+        st.sidebar.divider()
+        st.sidebar.header("🔍 Configurazione Query")
         
-        query_type = st.selectbox(
-            "Quale insight vuoi esplorare?",
-            ["🌍 Nazionalità: Chi sono i turisti più critici?", 
-             "🏗️ Lavori in Corso: Quanto impattano sul voto?",
-             "👥 Tipo Viaggio: Coppie vs Famiglie vs Solo"],
-            help="Ogni analisi rivela pattern diversi sui comportamenti dei clienti"
+        query_type = st.sidebar.selectbox(
+            "Tipo di analisi:",
+            ["🌍 Nazionalità", "🏗️ Lavori in Corso", "👥 Tipo Viaggio"],
+            help="Seleziona il tipo di analisi avanzata da eseguire"
         )
         
         st.markdown("")  # Spacing
