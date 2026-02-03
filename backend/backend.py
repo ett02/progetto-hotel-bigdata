@@ -439,3 +439,40 @@ class GestoreBigData:
             ) \
             .filter(col("num_recensioni") > 50) \
             .orderBy(col("voto_medio").desc())
+
+    def query_lunghezza_recensioni(self, df_hotel):
+        """
+        Query 4: 'Review Length Analysis'.
+        Analizza la correlazione tra lunghezza delle recensioni e voto dato.
+        
+        Ipotesi da verificare:
+        - Clienti molto insoddisfatti scrivono recensioni più lunghe (sfogo)
+        - Recensioni brevi potrebbero essere meno affidabili
+        """
+        from pyspark.sql.functions import length, when, stddev
+        
+        # Calcola lunghezza totale recensione
+        df_len = df_hotel.withColumn("len_pos", length(col("Positive_Review")))
+        df_len = df_len.withColumn("len_neg", length(col("Negative_Review")))
+        df_len = df_len.withColumn("len_totale", col("len_pos") + col("len_neg"))
+        
+        # Categorizza per lunghezza
+        df_len = df_len.withColumn("categoria_lunghezza",
+            when(col("len_totale") > 500, "📝 Molto Dettagliato")
+            .when(col("len_totale") > 200, "✍️ Dettagliato")
+            .otherwise("📄 Breve")
+        )
+        
+        # Aggregazione con statistiche
+        result = df_len.groupBy("categoria_lunghezza") \
+            .agg(
+                avg("Reviewer_Score").alias("voto_medio"),
+                count("*").alias("num_recensioni"),
+                avg("len_totale").alias("lunghezza_media_caratteri"),
+                avg("len_pos").alias("lunghezza_media_positiva"),
+                avg("len_neg").alias("lunghezza_media_negativa"),
+                stddev("Reviewer_Score").alias("deviazione_std")
+            ) \
+            .orderBy(col("voto_medio").desc())
+        
+        return result

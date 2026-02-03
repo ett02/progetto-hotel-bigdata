@@ -607,7 +607,7 @@ elif page == "🧠 Insight Avanzati":
         
         query_type = st.sidebar.selectbox(
             "Tipo di analisi:",
-            ["🌍 Nazionalità", "🏗️ Lavori in Corso", "👥 Tipo Viaggio"],
+            ["🌍 Nazionalità", "🏗️ Lavori in Corso", "👥 Tipo Viaggio", "📏 Lunghezza Recensioni"],
             help="Seleziona il tipo di analisi avanzata da eseguire"
         )
         
@@ -730,7 +730,7 @@ elif page == "🧠 Insight Avanzati":
                         st.warning("Dati insufficienti per il confronto.")
         
         # ========= QUERY 3: TIPO VIAGGIO =========
-        else:
+        elif "Tipo Viaggio" in query_type:
             st.subheader("👥 Analisi per Tipo di Viaggio")
             st.markdown("""
             **Obiettivo**: Capire quale **target** (coppie, famiglie, solitari) è più soddisfatto.  
@@ -771,6 +771,87 @@ elif page == "🧠 Insight Avanzati":
                         # Insight
                         best = df_viaggi.iloc[0]
                         st.success(f"🏆 **Target più soddisfatto**: {best['tipo_viaggio']} con {best['voto_medio']:.2f}/10")
+                    else:
+                        st.warning("Nessun dato trovato.")
+        
+        # ========= QUERY 4: LUNGHEZZA RECENSIONI =========
+        elif query_type == "📏 Lunghezza Recensioni":
+            st.subheader("📏 Analisi Lunghezza Recensioni")
+            st.markdown("""
+            **Obiettivo**: Scoprire se esiste una correlazione tra **quanto scrive** un cliente e il **voto** che dà.  
+            **Utilità**: Identificare pattern di comportamento e valutare l'affidabilità delle recensioni.
+            """)
+            
+            with st.expander("ℹ️ Come funziona"):
+                st.markdown("""
+                - **Calcolo**: Somma caratteri recensione positiva + negativa
+                - **Categorie**:
+                  - **📄 Breve**: < 200 caratteri
+                  - **✍️ Dettagliato**: 200-500 caratteri
+                  - **📝 Molto Dettagliato**: > 500 caratteri
+                - **Ipotesi da verificare**:
+                  - Clienti molto insoddisfatti scrivono recensioni lunghe (sfogo)?
+                  - Recensioni brevi sono meno affidabili/informative?
+                """)
+            
+            if st.button("🚀 Esegui Analisi Lunghezza", type="primary"):
+                with st.spinner("Analizzando lunghezza recensioni..."):
+                    df_len = gestore.query_lunghezza_recensioni(st.session_state.df_hotel).toPandas()
+                    
+                    if len(df_len) > 0:
+                        # Metriche generali
+                        st.markdown("### 📊 Risultati per Categoria")
+                        
+                        for idx, row in df_len.iterrows():
+                            st.markdown(f"#### {row['categoria_lunghezza']}")
+                            
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("⭐ Voto Medio", f"{row['voto_medio']:.2f}")
+                            with col2:
+                                st.metric("📝 Recensioni", f"{row['num_recensioni']:,}")
+                            with col3:
+                                st.metric("📏 Lungh. Media", f"{row['lunghezza_media_caratteri']:.0f} char")
+                            with col4:
+                                st.metric("📊 Dev. Std", f"{row['deviazione_std']:.2f}")
+                            
+                            # Dettagli aggiuntivi
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.caption(f"✅ Positiva: {row['lunghezza_media_positiva']:.0f} caratteri")
+                            with col2:
+                                st.caption(f"❌ Negativa: {row['lunghezza_media_negativa']:.0f} caratteri")
+                            
+                            st.markdown("")  # Spacing
+                        
+                        st.divider()
+                        
+                        # Grafico comparativo
+                        st.markdown("### 📊 Confronto Visivo")
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**Voto Medio per Categoria**")
+                            st.bar_chart(df_len.set_index('categoria_lunghezza')['voto_medio'])
+                        
+                        with col2:
+                            st.markdown("**Numero Recensioni per Categoria**")
+                            st.bar_chart(df_len.set_index('categoria_lunghezza')['num_recensioni'])
+                        
+                        # Insight automatico
+                        st.divider()
+                        highest_rated = df_len.iloc[0]
+                        lowest_rated = df_len.iloc[-1]
+                        
+                        diff = highest_rated['voto_medio'] - lowest_rated['voto_medio']
+                        
+                        if diff > 0.3:
+                            st.success(f"📊 **Insight**: Le recensioni **{highest_rated['categoria_lunghezza']}** hanno voti significativamente più alti (+{diff:.2f} punti) rispetto a **{lowest_rated['categoria_lunghezza']}**")
+                        elif diff < -0.3:
+                            st.warning(f"⚠️ **Insight**: Le recensioni **{lowest_rated['categoria_lunghezza']}** hanno voti più bassi (-{abs(diff):.2f} punti) - potrebbero indicare clienti più critici o problemi seri")
+                        else:
+                            st.info(f"ℹ️ **Insight**: La lunghezza della recensione ha un impatto limitato sul voto (diff: {diff:.2f})")
+                        
                     else:
                         st.warning("Nessun dato trovato.")
     else:
