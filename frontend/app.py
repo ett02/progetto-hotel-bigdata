@@ -7,6 +7,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
 from backend import GestoreBigData
+from pyspark.sql.functions import avg, col, count # AGGIUNTI per la mappa
 
 # Configurazione pagina
 st.set_page_config(page_title="Analisi Big Data Hotel", layout="wide")
@@ -45,23 +46,58 @@ if st.sidebar.button("Carica Dataset"):
             st.error(f"Errore nel caricamento: {e}")
 
 # Tab Layout
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Esplorazione Dati (EDA)", "😊 Sentiment Analysis", "🌍 Clustering Hotel", "📝 Topic Modeling", "🧠 Insight Avanzati"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Esplorazione Dati (EDA)", "😊 Sentiment Analysis", "🗺️ Mappa & Clustering", "📝 Topic Modeling", "🧠 Insight Avanzati"])
 
 # TAB 1: EDA
 with tab1:
-    st.header("Esplorazione Dati")
+    st.header("📊 Esplorazione Dati")
+    
     if st.session_state.df_hotel:
-        st.subheader("Anteprima Dataset Hotel")
-        # Convertiamo in Pandas solo una piccola parte per la visualizzazione
-        st.dataframe(st.session_state.df_hotel.limit(1000).toPandas())
+        # === SEZIONE 1: STATISTICHE GENERALI ===
+        st.subheader("📈 Statistiche Generali")
         
-        st.subheader("Statistiche Veloci")
+        # Calcola metriche
         num_hotel = st.session_state.df_hotel.count()
         avg_score = st.session_state.df_hotel.select("Average_Score").agg({"Average_Score": "avg"}).collect()[0][0]
-        st.metric("Totale Recensioni", num_hotel)
-        st.metric("Punteggio Medio Globale", f"{avg_score:.2f}")
+        num_hotels_unique = st.session_state.df_hotel.select("Hotel_Name").distinct().count()
+        
+        # Layout a 3 colonne per metriche
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("📝 Totale Recensioni", f"{num_hotel:,}")
+        with col2:
+            st.metric("⭐ Punteggio Medio", f"{avg_score:.2f}/10")
+        with col3:
+            st.metric("🏨 Hotel Unici", f"{num_hotels_unique:,}")
+        
+        st.markdown("")  # Spacing
+        st.divider()
+        
+        # === SEZIONE 2: ANTEPRIMA DATASET ===
+        st.subheader("🔍 Anteprima Dataset")
+        st.caption("Visualizzazione delle prime 1000 recensioni")
+        
+        # Opzioni di visualizzazione
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.caption("Seleziona colonne da visualizzare:")
+        with col2:
+            show_all = st.checkbox("Mostra tutte le colonne", value=False)
+        
+        if show_all:
+            st.dataframe(st.session_state.df_hotel.limit(1000).toPandas(), use_container_width=True)
+        else:
+            # Mostra solo colonne rilevanti
+            columns_to_show = ["Hotel_Name", "Reviewer_Score", "Reviewer_Nationality", "Positive_Review", "Negative_Review"]
+            st.dataframe(
+                st.session_state.df_hotel.select(columns_to_show).limit(1000).toPandas(),
+                use_container_width=True,
+                height=400
+            )
+        
+        st.markdown("")  # Spacing
     else:
-        st.info("Carica i dati dalla sidebar per iniziare.")
+        st.info("💡 Carica i dati dalla sidebar per iniziare l'esplorazione.")
 
 # TAB 2: SENTIMENT ANALYSIS
 with tab2:
@@ -158,33 +194,307 @@ with tab2:
     else:
         st.info("Carica i dati prima di procedere.")
 
-# TAB 3: CLUSTERING
+# TAB 3: MAPPA & CLUSTERING
 with tab3:
-    st.header("Clustering Geografico e Qualitativo (K-Means)")
-    st.markdown("Raggruppa gli hotel in base a posizione e punteggio.")
-    
-    k_value = st.slider("Numero di Cluster (K)", 2, 10, 5)
+    st.header("🗺️ Mappa Geografica & Clustering Intelligente")
+    st.markdown("""
+    **Due analisi complementari:**
+    - 📍 **Mappa**: Visualizzazione geografica degli hotel
+    - 🎯 **Clustering**: Gruppi significativi basati su caratteristiche
+    """)
     
     if st.session_state.df_hotel:
-        if st.button("Esegui Clustering"):
-            with st.spinner("Esecuzione K-Means..."):
-                risultati_km, silhouette = gestore.esegui_clustering_hotel(st.session_state.df_hotel, k=k_value)
-                st.metric("Silhouette Score (Qualità Cluster)", f"{silhouette:.4f}")
+        # Selezione modalità
+        mode = st.radio(
+            "Seleziona visualizzazione:",
+            ["📍 Mappa Geografica", "🎯 Clustering Intelligente"],
+            horizontal=True
+        )
+        
+        st.divider()
+        
+        # ========= SEZIONE A: MAPPA GEOGRAFICA =========
+        if "Mappa" in mode:
+            st.subheader("📍 Distribuzione Geografica Hotels")
+            st.markdown("Visualizza tutti gli hotel sulla mappa, colorati in base al voto medio.")
+            
+            with st.expander("ℹ️ Come funziona"):
+                st.markdown("""
+                - Ogni punto rappresenta un hotel
+                - Colori basati su voto medio (più alto = migliore)
+                - Usa la mappa interattiva per esplorare zone geografiche
+                """)
+            
+            # Opzioni filtro
+            col1, col2 = st.columns(2)
+            with col1:
+                sample_size = st.slider("Percentuale hotel da mostrare", 10, 100, 50, step=10,
+                                       help="Ridurre per performance migliori")
+            with col2:
+                min_reviews = st.number_input("Minimo recensioni", 0, 500, 50,
+                                             help="Filtra hotel con poche recensioni")
+            
+            if st.button("🗺️ Mostra Mappa", type="primary"):
+                with st.spinner("Generando mappa..."):
+                    try:
+                        # Aggregazione: un punto per hotel
+                        df_map_data = st.session_state.df_hotel.groupBy("Hotel_Name", "lat", "lng") \
+                            .agg(
+                                avg("Reviewer_Score").alias("voto_medio"),
+                                count("*").alias("num_recensioni")
+                            ) \
+                            .filter(col("num_recensioni") >= min_reviews) \
+                            .sample(fraction=sample_size/100.0) \
+                            .toPandas()
+                        
+                        # Rinomina per Streamlit
+                        df_map_data = df_map_data.rename(columns={'lng': 'longitude', 'lat': 'latitude'})
+                        
+                        # Metriche
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("🏨 Hotels Visualizzati", len(df_map_data))
+                        with col2:
+                            avg_score = df_map_data['voto_medio'].mean()
+                            st.metric("⭐ Voto Medio Globale", f"{avg_score:.2f}")
+                        with col3:
+                            total_reviews = df_map_data['num_recensioni'].sum()
+                            st.metric("📝 Recensioni Totali", f"{total_reviews:,}")
+                        
+                        # Mappa
+                        st.map(df_map_data[['latitude', 'longitude']], size=20)
+                        
+                        # Top 5 per voto
+                        st.markdown("### 🏆 Top 5 Hotels per Voto")
+                        top5 = df_map_data.nlargest(5, 'voto_medio')[['Hotel_Name', 'voto_medio', 'num_recensioni']]
+                        top5.columns = ['Hotel', 'Voto Medio', 'Recensioni']
+                        st.dataframe(top5, use_container_width=True, hide_index=True)
+                        
+                    except Exception as e:
+                        st.error(f"Errore: {e}")
+        
+        # ========= SEZIONE B: CLUSTERING INTELLIGENTE =========
+        else:
+            st.subheader("🎯 Clustering Intelligente degli Hotel")
+            
+            # Introduzione semplificata
+            st.markdown("""
+            ### 💡 Cosa fa questa analisi?
+            
+            Invece di raggruppare hotel per **posizione geografica** (lat/lon), li raggruppa per **come sono davvero**:
+            - Quanto sono buoni (voto, recensioni eccellenti)
+            - Cosa dicono i clienti (sentiment positivo/negativo)
+            - Quanti turisti diversi attraggono (nazionalità)
+            - Quali problemi hanno (costruzioni, pulizia, staff)
+            
+            **Risultato**: Scopri gruppi come "Hotel di Lusso", "Tesori Nascosti", "Budget con Problemi"
+            """)
+            
+            # Process visualization
+            with st.expander("📋 Come funziona il processo (passo-passo)"):
+                st.markdown("""
+                #### Step 1️⃣: Calcolo Features per ogni Hotel
+                Per ogni hotel, calcoliamo:
+                - 📊 **Performance**: Voto medio, quante recensioni ha, % di voti eccellenti (≥9)
+                - 😊 **Sentiment**: Quanto sono lunghe le recensioni positive vs negative
+                - 🌍 **Diversità**: Quante nazionalità diverse lo recensiscono
+                - ⚠️ **Problemi**: % di recensioni che menzionano costruzioni, sporco, staff scortese
                 
-                # Visualizzazione Mappa
-                # Convertiamo tutto il DF in Pandas per st.map (attenzione: se è troppo grande potrebbe rallentare, 
-                # ma per gli hotel unici dovrebbe andare bene. Qui usiamo tutte le recensioni, che è pesante.
-                # Meglio raggruppare per hotel prima di visualizzare)
-                df_map = risultati_km.select("lat", "lng", "prediction").sample(fraction=0.1).toPandas() # Campionamento per velocità
+                #### Step 2️⃣: Normalizzazione
+                Trasformiamo tutti i numeri sulla stessa scala (0-1) così nessuna feature domina le altre.
                 
-                # FIX: Streamlit richiede 'longitude' invece di 'lng'
-                df_map = df_map.rename(columns={'lng': 'longitude'})
+                #### Step 3️⃣: K-Means Clustering
+                L'algoritmo raggruppa hotel **simili** tra loro basandosi su tutte le features insieme.
                 
-                # Rinominiamo prediction in color o usiamo st.map semplice
-                st.map(df_map)
-                st.caption("Mappa di un campione del 10% delle recensioni, colorate per cluster.")
+                #### Step 4️⃣: Interpretazione Automatica
+                Il sistema analizza ogni gruppo e suggerisce un nome (es. "Premium Hotels" se hanno voto alto e tante recensioni).
+                """)
+            
+            st.divider()
+            
+            # Seleziona K con spiegazione
+            st.markdown("### 🔢 Quanti gruppi vuoi trovare?")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                k_clusters = st.slider("Numero di Gruppi (K)", 2, 6, 4)
+            with col2:
+                st.info(f"""
+                **Consiglio:**
+                - K=3: Pochi gruppi ben distinti
+                - K=4: **Bilanciato** ✅
+                - K=5-6: Molti gruppi dettagliati
+                """)
+            
+            if st.button("🚀 Avvia Clustering Intelligente", type="primary", use_container_width=True):
+                with st.spinner("⏳ Analisi in corso (può richiedere 30-60 secondi)..."):
+                    
+                    # Progress indicators
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    try:
+                        status_text.text("📊 Step 1/4: Calcolo features per ogni hotel...")
+                        progress_bar.progress(25)
+                        
+                        result = gestore.esegui_clustering_hotel(st.session_state.df_hotel, k=k_clusters)
+                        
+                        status_text.text("🔢 Step 2/4: Normalizzazione e clustering...")
+                        progress_bar.progress(50)
+                        
+                        df_clustered = result['df_clustered']
+                        cluster_stats = result['cluster_stats'].toPandas()
+                        cluster_names = result['cluster_names']
+                        
+                        status_text.text("📈 Step 3/4: Calcolo statistiche...")
+                        progress_bar.progress(75)
+                        
+                        status_text.text("✅ Step 4/4: Generazione visualizzazioni...")
+                        progress_bar.progress(100)
+                        
+                        # Clear progress
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        st.success(f"✅ **Completato!** Trovati {len(cluster_stats)} gruppi distinti di hotel.")
+                        
+                        # ===== LEGENDA =====
+                        with st.expander("📖 LEGENDA - Come Leggere i Risultati", expanded=False):
+                            st.markdown("""
+                            ### 📊 Significato delle Metriche
+                            
+                            | Metrica | Cosa Significa | Esempio |
+                            |---------|---------------|---------|
+                            | **🏨 Hotels** | Quanti hotel ci sono in questo gruppo | 45 hotels |
+                            | **⭐ Voto Medio** | Media dei voti di tutti gli hotel del gruppo | 8.5/10 |
+                            | **📝 Recensioni Avg** | Media di quante recensioni ha ogni hotel | 1200 recensioni/hotel |
+                            | **🌟 % Eccellenti** | % di recensioni con voto ≥ 9/10 (super soddisfatti) | 55% = metà clienti entusiasti |
+                            | **⚠️ % Problemi** | % di recensioni che menzionano costruzioni/lavori | 12% = pochi problemi |
+                            
+                            ---
+                            
+                            ### 🏷️ Significato dei Nomi dei Gruppi
+                            
+                            I nomi sono **assegnati automaticamente** dal sistema in base alle caratteristiche:
+                            
+                            #### 🏆 Premium Hotels
+                            - **Voto**: ≥ 8.5 (eccellente)
+                            - **Recensioni**: > 500 (molto popolari)
+                            - **Profilo**: Hotel di lusso consolidati, qualità garantita
+                            
+                            #### 💎 Hidden Gems (Tesori Nascosti)
+                            - **Voto**: ≥ 8.0 (ottimo)
+                            - **Recensioni**: < 200 (poca visibilità)
+                            - **Profilo**: Piccoli hotel di qualità, poco conosciuti ma eccellenti
+                            
+                            #### 🌟 Popular Mixed
+                            - **Voto**: 7.0-8.4 (medio-buono)
+                            - **Recensioni**: > 800 (famosissimi)
+                            - **Profilo**: Hotel molto noti ma con opinioni miste (alcuni adorano, altri no)
+                            
+                            #### 📉 Budget/Problems
+                            - **Voto**: < 7.0 (basso) OR
+                            - **Problemi**: > 15% (molte menzioni negative)
+                            - **Profilo**: Hotel economici o con problemi ricorrenti
+                            
+                            #### 📊 Cluster X
+                            - Gruppo che non rientra nelle categorie precedenti
+                            - Guarda le metriche per capire il profilo
+                            """)
+                        
+                        st.divider()
+                        
+                        # ===== SEZIONE RISULTATI SEMPLIFICATA =====
+                        
+                        st.markdown("## 🏷️ Gruppi Scoperti")
+                        st.caption("Ogni gruppo rappresenta hotel con caratteristiche simili")
+                        
+                        st.markdown("")  # Spacing
+                        
+                        # Cards per ogni cluster
+                        for idx, row in cluster_stats.iterrows():
+                            cluster_id = int(row['cluster'])
+                            nome = cluster_names.get(cluster_id, f"Gruppo {cluster_id}")
+                            
+                            # Visual container per cluster
+                            st.markdown(f"### {nome}")
+                            
+                            # Metrics in colonne con spacing migliorato
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("🏨 Hotels", int(row['num_hotel']))
+                            with col2:
+                                st.metric("⭐ Voto Medio", f"{row['avg_voto']:.2f}")
+                            with col3:
+                                st.metric("📝 Recensioni Avg", f"{row['avg_recensioni']:.0f}")
+                            with col4:
+                                perc_ecc = row['avg_eccellenti']
+                                st.metric("🌟 % Eccellenti", f"{perc_ecc:.1f}%")
+                            
+                            st.markdown("")  # Spacing
+                            
+                            # Interpretazione
+                            if row['avg_voto'] >= 8.5:
+                                st.success("✨ **Qualità Eccellente** - Hotel di alto livello con ottime recensioni")
+                            elif row['avg_voto'] >= 7.5:
+                                st.info("👍 **Buona Qualità** - Hotel solidi con feedback positivo")
+                            else:
+                                st.warning("⚠️ **Da Migliorare** - Possibili problemi da affrontare")
+                            
+                            st.markdown("")  # Spacing extra
+                            st.divider()
+                        
+                        # Grafico comparativo semplificato
+                        st.markdown("## 📊 Confronto Veloce")
+                        
+                        # Prepara dati per grafico
+                        import pandas as pd
+                        chart_data = pd.DataFrame({
+                            'Gruppo': [cluster_names.get(int(r['cluster']), f"Gruppo {r['cluster']}") for _, r in cluster_stats.iterrows()],
+                            'Voto Medio': cluster_stats['avg_voto'].values,
+                            'Num Hotels': cluster_stats['num_hotel'].values
+                        })
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("#### ⭐ Voto Medio per Gruppo")
+                            st.bar_chart(chart_data.set_index('Gruppo')['Voto Medio'])
+                        
+                        with col2:
+                            st.markdown("#### 🏨 Numero Hotel per Gruppo")
+                            st.bar_chart(chart_data.set_index('Gruppo')['Num Hotels'])
+                        
+                        # Tabella dettagliata (collapsible)
+                        with st.expander("📋 Vedi Statistiche Dettagliate"):
+                            display_stats = cluster_stats.copy()
+                            display_stats['Cluster'] = display_stats['cluster'].apply(lambda x: cluster_names.get(int(x), f"Gruppo {x}"))
+                            display_stats = display_stats[['Cluster', 'num_hotel', 'avg_voto', 'avg_recensioni', 'avg_eccellenti', 'avg_problemi']]
+                            display_stats.columns = ['Gruppo', '#Hotels', 'Voto', 'Recensioni', '% Eccellenti', '% Problemi']
+                            
+                            st.dataframe(display_stats, use_container_width=True, hide_index=True)
+                        
+                        # Esempi hotel (compatto)
+                        with st.expander("🏆 Vedi Esempi di Hotel per Gruppo"):
+                            df_examples = df_clustered.select("Hotel_Name", "cluster", "voto_medio", "num_recensioni") \
+                                .orderBy("cluster", col("voto_medio").desc()) \
+                                .limit(15) \
+                                .toPandas()
+                            
+                            for cluster_id in sorted(df_examples['cluster'].unique()):
+                                cluster_hotels = df_examples[df_examples['cluster'] == cluster_id].head(3)
+                                nome_cluster = cluster_names.get(cluster_id, f"Gruppo {cluster_id}")
+                                
+                                st.markdown(f"**{nome_cluster}**")
+                                for _, hotel in cluster_hotels.iterrows():
+                                    st.caption(f"• {hotel['Hotel_Name']} - ⭐ {hotel['voto_medio']:.2f} ({hotel['num_recensioni']:.0f} rec)")
+                                st.markdown("")
+                        
+                    except Exception as e:
+                        st.error(f"❌ Errore durante il clustering: {e}")
+                        with st.expander("🔍 Dettagli Tecnici"):
+                            import traceback
+                            st.code(traceback.format_exc())
     else:
-        st.info("Carica i dati prima di procedere.")
+        st.info("💡 Carica i dati dalla sidebar per iniziare.")
 
 # TAB 4: TOPIC MODELING
 with tab4:
@@ -279,21 +589,24 @@ with tab4:
 
 # TAB 5: INSIGHT AVANZATI
 with tab5:
-    st.header("🧠 Insight Avanzati - Query Spark Personalizzate")
+    st.header("🧠 Insight Avanzati")
     st.markdown("""
-    Analisi avanzate basate su **query Spark ottimizzate** per rivelare pattern nascosti nei dati.
-    Esplora comportamenti per nazionalità, impatto dei lavori, e preferenze per tipo di viaggio.
+    Analisi avanzate con query Spark personalizzate per scoprire pattern nascosti nei dati.
     """)
     
     if st.session_state.df_hotel:
-        # Selezione query
+        # === SELEZIONE QUERY ===
+        st.subheader("🔍 Seleziona Analisi")
+        
         query_type = st.selectbox(
-            "📊 Seleziona un'analisi",
+            "Quale insight vuoi esplorare?",
             ["🌍 Nazionalità: Chi sono i turisti più critici?", 
              "🏗️ Lavori in Corso: Quanto impattano sul voto?",
-             "👥 Tipo Viaggio: Coppie vs Famiglie vs Solo"]
+             "👥 Tipo Viaggio: Coppie vs Famiglie vs Solo"],
+            help="Ogni analisi rivela pattern diversi sui comportamenti dei clienti"
         )
         
+        st.markdown("")  # Spacing
         st.divider()
         
         # ========= QUERY 1: NAZIONALITÀ =========

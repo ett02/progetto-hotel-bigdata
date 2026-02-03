@@ -145,31 +145,150 @@ class GestoreBigData:
             'total_reviews': total_reviews
         }
 
+
     # ---------------------------------------------------------
-    # ALGORITMO: CLUSTERING (K-Means)
+    # ALGORITMO: CLUSTERING (K-Means) - FEATURE-BASED
     # ---------------------------------------------------------
-    def esegui_clustering_hotel(self, df_hotel, k=5):
+    
+    def preprocessing_hotel_features(self, df_hotel):
         """
-        Raggruppa gli hotel in base a caratteristiche geografiche e di qualità.
-        Features usate: lat, lng, Average_Score.
+        Feature Engineering per clustering intelligente degli hotel.
+        Calcola 4 categorie di features:
+        1. Performance Metrics (voto, popolarità)
+        2. Sentiment Balance (ratio pos/neg)
+        3. Audience Diversity (nazionalità, tipo viaggio)
+        4. Problem Indicators (costruzioni, pulizia, staff)
         """
-        # Assembla le feature in un unico vettore
-        assembler = VectorAssembler(
-            inputCols=["lat", "lng", "Average_Score"],
-            outputCol="features"
-        )
+        from pyspark.sql.functions import length, when, sum as spark_sum, countDistinct
         
-        kmeans = KMeans().setK(k).setSeed(1)
-        pipeline = Pipeline(stages=[assembler, kmeans])
+        # Group by Hotel_Name per aggregare tutte le recensioni
+        df_features = df_hotel.groupBy("Hotel_Name", "lat", "lng") \
+            .agg(
+                # === 1. PERFORMANCE METRICS ===
+                avg("Reviewer_Score").alias("voto_medio"),
+                count("Reviewer_Score").alias("num_recensioni"),
+                
+                # % recensioni eccellenti (score >= 9)
+                (spark_sum(when(col("Reviewer_Score") >= 9, 1).otherwise(0)) / count("*") * 100).alias("perc_eccellenti"),
+                
+                # % recensioni negative (score < 6)
+                (spark_sum(when(col("Reviewer_Score") < 6, 1).otherwise(0)) / count("*") * 100).alias("perc_negative"),
+                
+                # === 2. SENTIMENT BALANCE ===
+                # Ratio lunghezza media positive vs negative
+                (avg(length(col("Positive_Review"))) / (avg(length(col("Negative_Review"))) + 1)).alias("ratio_pos_neg"),
+                
+                # Lunghezza media totale recensioni
+                avg(length(col("Positive_Review")) + length(col("Negative_Review"))).alias("avg_review_length"),
+                
+                # === 3. AUDIENCE DIVERSITY ===
+                # Numero nazionalità distinte
+                countDistinct("Reviewer_Nationality").alias("num_nazionalita"),
+                
+                # === 4. PROBLEM INDICATORS ===
+                # % recensioni con menzioni costruzione
+                (spark_sum(when(col("Negative_Review").rlike("(?i)construction|renovation|works|noise"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_costruzione"),
+                
+                # % recensioni con menzioni pulizia
+                (spark_sum(when(col("Negative_Review").rlike("(?i)dirty|clean|hygiene"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_pulizia"),
+                
+                # % recensioni con menzioni staff
+                (spark_sum(when(col("Negative_Review").rlike("(?i)staff|service|reception|rude"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_staff")
+            )
         
-        modello_km = pipeline.fit(df_hotel)
-        risultati = modello_km.transform(df_hotel)
+        return df_features
+    
+    def esegui_clustering_hotel(self, df_hotel, k=4):
+        """
+        K-Means clustering basato su CARATTERISTICHE degli hotel (non geografiche).
+        Identifica gruppi significativi: Premium, Budget, Hidden Gems, ecc.
         
-        # Valutazione (Silhouette Score)
-        evaluator = ClusteringEvaluator()
-        silhouette = evaluator.evaluate(risultati)
+        Args:
+            df_hotel: DataFrame con recensioni
+            k: numero di cluster
+            
+        Returns:
+            dict con:
+            - df_clustered: Hotel con cluster assignment
+            - features_per_cluster: Medie features per ogni cluster
+            - cluster_names: Interpretazione cluster
+        """
+        from pyspark.ml.feature import VectorAssembler, StandardScaler
         
-        return risultati, silhouette
+        # 1. Calcola features
+        df_features = self.preprocessing_hotel_features(df_hotel)
+        
+        # 2. Seleziona features numeriche per clustering (escludi lat/lng)
+        feature_cols = [
+            "voto_medio", "num_recensioni", "perc_eccellenti", "perc_negative",
+            "ratio_pos_neg", "avg_review_length", "num_nazionalita",
+            "menzioni_costruzione", "menzioni_pulizia", "menzioni_staff"
+        ]
+        
+        # 3. Assembla feature vector
+        assembler = VectorAssembler(inputCols=feature_cols, outputCol="features_raw")
+        df_assembled = assembler.transform(df_features)
+        
+        # 4. Normalizza features (importante per K-Means!)
+        scaler = StandardScaler(inputCol="features_raw", outputCol="features", withMean=True, withStd=True)
+        scaler_model = scaler.fit(df_assembled)
+        df_scaled = scaler_model.transform(df_assembled)
+        
+        # 5. K-Means
+        kmeans = KMeans(k=k, seed=42, maxIter=20, featuresCol="features", predictionCol="cluster")
+        model = kmeans.fit(df_scaled)
+        df_clustered = model.transform(df_scaled)
+        
+        # 6. Calcola statistiche per cluster
+        cluster_stats = df_clustered.groupBy("cluster") \
+            .agg(
+                count("*").alias("num_hotel"),
+                avg("voto_medio").alias("avg_voto"),
+                avg("num_recensioni").alias("avg_recensioni"),
+                avg("perc_eccellenti").alias("avg_eccellenti"),
+                avg("menzioni_costruzione").alias("avg_problemi")
+            ) \
+            .orderBy("cluster")
+        
+        # 7. Interpretazione automatica cluster
+        cluster_interpretations = self._interpreta_cluster(cluster_stats.toPandas())
+        
+        return {
+            'df_clustered': df_clustered,
+            'cluster_stats': cluster_stats,
+            'cluster_names': cluster_interpretations,
+            'model': model,
+            'feature_cols': feature_cols
+        }
+    
+    def _interpreta_cluster(self, stats_df):
+        """
+        Assegna nomi interpretativi ai cluster basandosi sulle statistiche.
+        """
+        interpretations = {}
+        
+        for _, row in stats_df.iterrows():
+            cluster_id = int(row['cluster'])
+            voto = row['avg_voto']
+            recensioni = row['avg_recensioni']
+            eccellenti = row['avg_eccellenti']
+            problemi = row['avg_problemi']
+            
+            # Logica interpretativa
+            if voto >= 8.5 and recensioni > 500:
+                nome = "🏆 Premium Hotels"
+            elif voto >= 8.0 and recensioni < 200:
+                nome = "💎 Hidden Gems"
+            elif voto < 7.0 or problemi > 15:
+                nome = "📉 Budget/Problems"
+            elif recensioni > 800:
+                nome = "🌟 Popular Mixed"
+            else:
+                nome = f"📊 Cluster {cluster_id}"
+            
+            interpretations[cluster_id] = nome
+        
+        return interpretations
 
     # ---------------------------------------------------------
     # 3. ALGORITMO: TOPIC MODELING (LDA)
