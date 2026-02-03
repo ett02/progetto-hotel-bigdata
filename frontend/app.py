@@ -532,62 +532,125 @@ elif page == "📝 Topic Modeling":
     col1, col2 = st.columns([2, 1])
     with col1:
         num_topics = st.slider("🔢 Numero di Topic da estrarre", 2, 10, 3, help="Più topic = più granularità, ma rischio di sovrapposizione")
+
+        evaluate_stability = st.checkbox(
+            "🧪 Valuta stabilità topic (2 run con seed diversi)",
+            value=True,
+            help="Calcola quanto i topic sono stabili tra due addestramenti LDA. Utile per validare interpretabilità."
+        )
+
     with col2:
         st.metric("🎯 Consigliato", "3-4 topic")
     
-    if st.session_state.df_hotel:
+    if "df_hotel" in st.session_state and st.session_state.df_hotel is not None:
         if st.button("🚀 Estrai Topic dalle Recensioni Negative", type="primary"):
-            with st.spinner("🔍 Analisi LDA in corso (può richiedere 1-2 minuti)..."):
+            with st.spinner("🔍 Analisi LDA in corso..."):
                 try:
-                    result = gestore.esegui_topic_modeling(st.session_state.df_hotel, num_topics=num_topics)
-                    
-                    # Unwrap results
-                    topics_data = result['topics_data']
-                    vocab = result['vocab']
-                    num_reviews = result['num_reviews']
-                    log_perplexity = result['log_perplexity']
-                    
+                    result = gestore.esegui_topic_modeling(st.session_state.df_hotel, num_topics=num_topics, evaluate_stability=evaluate_stability, top_terms=10)
+
+                    topics_data = result["topics_data"]
+                    vocab = result["vocab"]
+                    num_reviews = int(result["num_reviews"])
+                    log_perplexity = float(result["log_perplexity"])
+                    log_likelihood = float(result.get("log_likelihood", 0.0))
+
                     st.success(f"✅ Analisi completata su **{num_reviews:,}** recensioni negative!")
-                    
-                    # Metriche di qualità
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("📊 Recensioni Analizzate", f"{num_reviews:,}")
-                    with col2:
-                        st.metric("📉 Log-Perplexity", f"{log_perplexity:.2f}", 
-                                 help="Misura la qualità del modello. Valori più bassi indicano modelli migliori.")
-                    
+
+                    # Warning se dataset troppo piccolo per LDA stabile
+                    if num_reviews < 300:
+                        st.warning(
+                            "⚠️ Campione relativamente piccolo per LDA: i topic potrebbero essere meno stabili. "
+                            "Se possibile, riduci filtri (es. lunghezza minima) o usa meno topic."
+                        )
+
+                    # Metriche modello
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric("📊 Recensioni analizzate", f"{num_reviews:,}")
+                    with c2:
+                        st.metric("📉 Log-Perplexity", f"{log_perplexity:.3f}",
+                              help="Più basso tende a indicare un modello che si adatta meglio ai dati.")
+                    with c3:
+                        st.metric("📈 Log-Likelihood", f"{log_likelihood:.1f}",
+                              help="Più alto (meno negativo) indica un fit migliore, a parità di dati e k.")
+
+                    if evaluate_stability and result.get("stability") is not None:
+                        st.markdown("### 🧪 Stabilità dei Topic")
+                        stability = float(result["stability"])
+                        seeds = result.get("compare_topics", {})
+                        seed_main = seeds.get("seed_main", 42)
+                        seed_alt = seeds.get("seed_alt", 99)
+
+                        c1, c2 = st.columns([1, 2])
+                        with c1:
+                            st.metric("Stability score (Jaccard)", f"{stability:.3f}")
+                        with c2:
+                            st.caption(
+                                f"Confronto tra due addestramenti LDA con seed {seed_main} e {seed_alt}. "
+                                "0 = instabile, 1 = identico sui top-terms."
+                            )
+
+                        # Warning soglie pratiche
+                        if stability < 0.35:
+                            st.warning("⚠️ Stabilità bassa: i topic cambiano molto tra run. Prova a ridurre k, aumentare minDF o ripulire stopwords.")
+                        elif stability < 0.55:
+                            st.info("ℹ️ Stabilità media: topic ragionevoli ma con sovrapposizioni. Puoi migliorare con stopwords di dominio.")
+                        else:
+                            st.success("✅ Stabilità buona: i topic sono robusti e interpretabili.")
+
+                        # Tabella per-topic
+                        st.markdown("#### Dettaglio per Topic")
+                        stab_df = pd.DataFrame(result["stability_table"])
+                        stab_df["topic_main"] = stab_df["topic_main"].apply(lambda x: f"Topic {x+1}")
+                        stab_df["topic_alt"] = stab_df["topic_alt"].apply(lambda x: f"Topic {x+1}")
+                        stab_df["main_top_terms"] = stab_df["main_terms"].apply(lambda t: ", ".join(t[:7]))
+                        stab_df["alt_top_terms"] = stab_df["alt_terms"].apply(lambda t: ", ".join(t[:7]))
+
+                        st.dataframe(
+                            stab_df[["topic_main", "topic_alt", "jaccard", "main_top_terms", "alt_top_terms"]],
+                            use_container_width=True,
+                            height=300
+                        )
+
                     st.divider()
-                    st.subheader("🗂️ Topic Trovati")
-                    st.caption("Ogni topic è un gruppo di parole correlate che rappresentano un tema comune nelle lamentele")
-                    
-                    # Visualizzazione Topic con cards
-                    topics_list = topics_data.collect()
-                    
-                    # Usa colonne per layout più pulito
-                    for row in topics_list:
-                        topic_id = row['topic']
-                        term_indices = row['termIndices']
-                        term_weights = row['termWeights']
-                        
-                        # Estrai parole e pesi
-                        terms_with_weights = [(vocab[idx], float(weight)) for idx, weight in zip(term_indices, term_weights)]
-                        
-                        # Card per ogni topic
-                        with st.container():
-                            st.markdown(f"### 📌 Topic {topic_id + 1}")
-                            
-                            # Mostra top 7 termini con barre di peso
-                            top_terms = terms_with_weights[:7]
-                            
-                            for term, weight in top_terms:
-                                # Crea barra di progresso visuale per il peso
-                                normalized_weight = min(weight * 100, 100)  # Normalizza per visualizzazione
-                                st.progress(normalized_weight / 100, text=f"**{term}** ({weight:.3f})")
-                            
-                            st.caption(f"💡 **Interpretazione suggerita**: {', '.join([t[0] for t in top_terms[:3]])}")
-                            st.divider()
-                            
+                    st.subheader("🗂️ Topic trovati")
+                    st.caption("Ogni topic è una distribuzione di parole: qui mostriamo i termini più pesati.")
+
+                    # Converti in pandas (pochi topic => sicuro)
+                    topics_pdf = topics_data.toPandas().sort_values("topic")
+
+                    for _, row in topics_pdf.iterrows():
+                        topic_id = int(row["topic"])
+                        term_indices = row["termIndices"]
+                        term_weights = row["termWeights"]
+
+                        # Mappa indici -> termini
+                        terms_with_weights = [
+                            (vocab[int(idx)], float(w))
+                            for idx, w in zip(term_indices, term_weights)
+                            if int(idx) < len(vocab)
+                        ]
+
+                        if len(terms_with_weights) == 0:
+                            continue
+
+                        # Normalizzazione robusta: rispetto al max peso del topic
+                        max_w = max(w for _, w in terms_with_weights) or 1.0
+
+                        st.markdown(f"### 📌 Topic {topic_id + 1}")
+
+                        top_terms = terms_with_weights[:10]  # mostra 10 termini
+                        for term, w in top_terms:
+                            norm = w / max_w  # 0..1
+                            st.progress(
+                                float(norm),
+                                text=f"**{term}**  (peso={w:.4f})"
+                            )
+
+                        # Interpretazione suggerita: prime 3 parole
+                        st.caption(f"💡 **Etichetta suggerita**: {', '.join([t[0] for t in top_terms[:3]])}")
+                    st.divider()
+
                 except Exception as e:
                     st.error(f"❌ Errore durante l'analisi: {e}")
     else:

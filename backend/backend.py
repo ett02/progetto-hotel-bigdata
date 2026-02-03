@@ -145,7 +145,6 @@ class GestoreBigData:
             'total_reviews': total_reviews
         }
 
-
     # ---------------------------------------------------------
     # ALGORITMO: CLUSTERING (K-Means) - FEATURE-BASED
     # ---------------------------------------------------------
@@ -293,82 +292,161 @@ class GestoreBigData:
     # ---------------------------------------------------------
     # 3. ALGORITMO: TOPIC MODELING (LDA)
     # ---------------------------------------------------------
-    def esegui_topic_modeling(self, df_hotel, num_topics=3):
+
+    def esegui_topic_modeling(self, df_hotel, num_topics=3, evaluate_stability=True, top_terms=10):
         """
         Estrae topic latenti dalle recensioni NEGATIVE usando LDA.
-        MIGLIORAMENTI:
-        - Filtra recensioni troppo corte o generiche
-        - Aumenta vocabolario e numero di termini per topic
-        - Restituisce pesi dei termini e metriche di qualità
+
+        Upgrade (passo 6):
+        - Valuta la stabilità dei topic ripetendo LDA con seed diversi
+        - Calcola una metrica: Jaccard similarity sui top-terms (0..1)
+        - Mantiene lo stesso vocabolario/features per rendere il confronto corretto
         """
-        from pyspark.sql.functions import length
-        
-        # Filtra recensioni negative significative (non vuote e non generiche)
+        from pyspark.sql.functions import col, length, lower, lit
+        from pyspark.storagelevel import StorageLevel
+
+        from pyspark.ml import Pipeline
+        from pyspark.ml.feature import RegexTokenizer, StopWordsRemover, CountVectorizer
+        from pyspark.ml.clustering import LDA
+
+        # ---------- 1) Filtri negative review "significative" ----------
         df_neg = df_hotel.filter(
-            (col("Negative_Review") != "No Negative") & 
-            (col("Negative_Review").isNotNull()) &
-            (length(col("Negative_Review")) > 30)  # Almeno 30 caratteri per evitare recensioni troppo brevi
+            (col("Negative_Review") != "No Negative") &
+            col("Negative_Review").isNotNull() &
+            (length(col("Negative_Review")) > 30)
         )
-        
-        # Conta quante recensioni negative stiamo analizzando
-        num_reviews = df_neg.count()
-        
-        # FIX: Pulizia testo AGGRESSIVA - rimuovi punteggiatura, simboli e numeri
-        from pyspark.sql.functions import regexp_replace, lower
-        
-        # Step 1: Converti in minuscolo
+
         df_neg = df_neg.withColumn("review_lower", lower(col("Negative_Review")))
-        
-        from pyspark.ml.feature import RegexTokenizer
-        
-        # SOLUZIONE ROBUSTA: Usa RegexTokenizer per estrarre SOLO parole di almeno 3 lettere
-        # pattern="[a-z]{3,}" -> Cerca sequenze di almeno 3 lettere a-z
-        # gaps=False -> Il pattern definisce i token (le parole), non i separatori
-        tokenizer = RegexTokenizer(inputCol="review_lower", outputCol="words", pattern="[a-z]{3,}", gaps=False)
-        
-        # StopWords standard (rimuoviamo quelle custom inutili ora)
-        remover = StopWordsRemover(inputCol="words", outputCol="filtered")
-        
-        # Aumentato vocabSize per catturare più termini specifici
-        # minDF=10 significa: ignora parole che appaiono in meno di 10 documenti
-        cv = CountVectorizer(inputCol="filtered", outputCol="features", vocabSize=1500, minDF=15.0)
-        
-        # LDA con più iterazioni per convergenza migliore
-        lda = LDA(k=num_topics, maxIter=20, optimizer="online", seed=42)
-        
-        # Pipeline semplice - solo CV e LDA
-        pipeline = Pipeline(stages=[tokenizer, remover, cv, lda])
-        
-        # Fit sui dati
-        modello_lda = pipeline.fit(df_neg)
-        risultati = modello_lda.transform(df_neg)
-        
-        # Estrazione modelli e metriche
-        cv_model = modello_lda.stages[2]
-        lda_model = modello_lda.stages[3]
+
+        df_neg = df_neg.persist(StorageLevel.MEMORY_AND_DISK)
+        num_reviews = df_neg.count()
+
+        # ---------- 2) Preprocessing testo (tokenizer robusto unicode) ----------
+        tokenizer = RegexTokenizer(
+            inputCol="review_lower",
+            outputCol="words",
+            pattern="\\p{L}{3,}",
+            gaps=False
+        )
+
+        # Stopwords base + (consigliato) stopwords di dominio
+        domain_stop = ["hotel", "room", "rooms", "stay", "staff", "place", "night", "nights"]
+        remover = StopWordsRemover(
+            inputCol="words",
+            outputCol="filtered",
+            stopWords=StopWordsRemover.loadDefaultStopWords("english") + domain_stop
+        )
+
+        # minDF deve essere int (>= 15 documenti)
+        cv = CountVectorizer(
+            inputCol="filtered",
+            outputCol="features",
+            vocabSize=1500,
+            minDF=15
+        )
+
+        # ---------- 3) Fissa vocabolario/features UNA sola volta ----------
+        feat_pipeline = Pipeline(stages=[tokenizer, remover, cv])
+        feat_model = feat_pipeline.fit(df_neg)
+        df_feat = feat_model.transform(df_neg).select("features")
+
+        cv_model = feat_model.stages[2]
         vocab = cv_model.vocabulary
-        
-        # Descrivi topic con PIÙ termini (10 invece di 5) e restituisci anche i pesi
-        topics_data = lda_model.describeTopics(maxTermsPerTopic=10)
-        
-        # Calcola perplexity come metrica di qualità (più basso = migliore)
-        log_likelihood = lda_model.logLikelihood(risultati)
-        log_perplexity = lda_model.logPerplexity(risultati)
-        
-        # Restituisci tutto
+
+        # Helper: estrazione top-terms (lista di liste) da lda_model
+        def extract_topic_terms(lda_model, vocab, top_terms):
+            topics = lda_model.describeTopics(maxTermsPerTopic=top_terms).collect()
+            out = []
+            for r in topics:
+                inds = r["termIndices"]
+                out.append([vocab[int(i)] for i in inds if int(i) < len(vocab)])
+            return out  # list of topics -> list of terms
+
+        # Helper: Jaccard
+        def jaccard(a, b):
+            sa, sb = set(a), set(b)
+            if len(sa) == 0 and len(sb) == 0:
+                return 1.0
+            if len(sa) == 0 or len(sb) == 0:
+                return 0.0
+            return len(sa.intersection(sb)) / len(sa.union(sb))
+
+        # Helper: matching greedy topic-to-topic tra due run
+        def greedy_match(topics_A, topics_B):
+            used = set()
+            matches = []
+            for i, ta in enumerate(topics_A):
+                best_j, best_sim = None, -1.0
+                for j, tb in enumerate(topics_B):
+                    if j in used:
+                        continue
+                    sim = jaccard(ta, tb)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_j = j
+                used.add(best_j)
+                matches.append((i, best_j, best_sim))
+            return matches  # (topicA, topicB, sim)
+
+        # ---------- 4) Fit modello "principale" ----------
+        lda_main = LDA(k=num_topics, maxIter=20, optimizer="online", seed=42)
+        lda_model_main = lda_main.fit(df_feat)
+
+        topics_data_main = lda_model_main.describeTopics(maxTermsPerTopic=top_terms)
+        log_likelihood = float(lda_model_main.logLikelihood(df_feat))
+        log_perplexity = float(lda_model_main.logPerplexity(df_feat))
+
+        stability = None
+        stability_table = None
+        compare_topics = None
+
+        # ---------- 5) Passo 6: stability check (seed diverso) ----------
+        if evaluate_stability:
+            lda_alt = LDA(k=num_topics, maxIter=20, optimizer="online", seed=99)
+            lda_model_alt = lda_alt.fit(df_feat)
+
+            terms_main = extract_topic_terms(lda_model_main, vocab, top_terms)
+            terms_alt = extract_topic_terms(lda_model_alt, vocab, top_terms)
+
+            matches = greedy_match(terms_main, terms_alt)
+
+            # costruisci risultati: per-topic + overall
+            per_topic = []
+            for a, b, sim in matches:
+                per_topic.append({
+                    "topic_main": int(a),
+                    "topic_alt": int(b),
+                    "jaccard": float(sim),
+                    "main_terms": terms_main[a],
+                    "alt_terms": terms_alt[b]
+                })
+
+            overall = sum(x["jaccard"] for x in per_topic) / len(per_topic)
+
+            stability = float(overall)
+            stability_table = per_topic  # lista di dict pronti per pandas
+            compare_topics = {
+                "seed_main": 42,
+                "seed_alt": 99
+            }
+
+        df_neg.unpersist()
+
         return {
-            'risultati': risultati,
-            'topics_data': topics_data,
-            'vocab': vocab,
-            'num_reviews': num_reviews,
-            'log_perplexity': log_perplexity,
-            'log_likelihood': log_likelihood
+            "topics_data": topics_data_main,
+            "vocab": vocab,
+            "num_reviews": num_reviews,
+            "log_perplexity": log_perplexity,
+            "log_likelihood": log_likelihood,
+            # passo 6 output
+            "stability": stability,
+            "stability_table": stability_table,
+            "compare_topics": compare_topics
         }
 
     # ---------------------------------------------------------
     # 4. QUERY AVANZATE (Nuove richieste)
     # ---------------------------------------------------------
-    
     
     def query_nazionalita_critiche(self, df_hotel):
         """
