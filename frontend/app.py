@@ -607,7 +607,7 @@ elif page == "🧠 Insight Avanzati":
         
         query_type = st.sidebar.selectbox(
             "Tipo di analisi:",
-            ["🌍 Nazionalità", "🏗️ Lavori in Corso", "👥 Tipo Viaggio", "📏 Lunghezza Recensioni"],
+            ["🌍 Nazionalità", "🏗️ Lavori in Corso", "👥 Tipo Viaggio", "📏 Lunghezza Recensioni", "📉 Affidabilità Voto (Std Dev)", "⚠️ Hotel Rischiosi (Alto Rischio)", "🤯 Expectation Gap (Realtà vs Aspettativa)"],
             help="Seleziona il tipo di analisi avanzata da eseguire"
         )
         
@@ -774,85 +774,190 @@ elif page == "🧠 Insight Avanzati":
                     else:
                         st.warning("Nessun dato trovato.")
         
-        # ========= QUERY 4: LUNGHEZZA RECENSIONI =========
+        # ========= QUERY 4: ASIMMETRIA EMOTIVA (Lunghezza) =========
         elif query_type == "📏 Lunghezza Recensioni":
-            st.subheader("📏 Analisi Lunghezza Recensioni")
+            st.subheader("📏 Asimmetria Emotiva: La Delusione genera più testo?")
             st.markdown("""
-            **Obiettivo**: Scoprire se esiste una correlazione tra **quanto scrive** un cliente e il **voto** che dà.  
-            **Utilità**: Identificare pattern di comportamento e valutare l'affidabilità delle recensioni.
+            **Obiettivo**: Analizzare il comportamento emotivo degli utenti.
+            **Ipotesi**: Quando siamo delusi (voto basso), tendiamo a scrivere molto di più rispetto a quando siamo felici.
             """)
             
-            with st.expander("ℹ️ Come funziona"):
-                st.markdown("""
-                - **Calcolo**: Somma caratteri recensione positiva + negativa
-                - **Categorie**:
-                  - **📄 Breve**: < 200 caratteri
-                  - **✍️ Dettagliato**: 200-500 caratteri
-                  - **📝 Molto Dettagliato**: > 500 caratteri
-                - **Ipotesi da verificare**:
-                  - Clienti molto insoddisfatti scrivono recensioni lunghe (sfogo)?
-                  - Recensioni brevi sono meno affidabili/informative?
-                """)
-            
-            if st.button("🚀 Esegui Analisi Lunghezza", type="primary"):
-                with st.spinner("Analizzando lunghezza recensioni..."):
-                    df_len = gestore.query_lunghezza_recensioni(st.session_state.df_hotel).toPandas()
+            if st.button("🚀 Analizza Comportamento Emotivo", type="primary"):
+                with st.spinner("Calcolando asimmetria emotiva..."):
+                    df_emo = gestore.query_lunghezza_recensioni(st.session_state.df_hotel).toPandas()
                     
-                    if len(df_len) > 0:
-                        # Metriche generali
-                        st.markdown("### 📊 Risultati per Categoria")
+                    if len(df_emo) > 0:
+                        st.markdown("### 📊 Risultati per Fascia di Voto")
                         
-                        for idx, row in df_len.iterrows():
-                            st.markdown(f"#### {row['categoria_lunghezza']}")
-                            
-                            col1, col2, col3, col4 = st.columns(4)
-                            with col1:
-                                st.metric("⭐ Voto Medio", f"{row['voto_medio']:.2f}")
-                            with col2:
-                                st.metric("📝 Recensioni", f"{row['num_recensioni']:,}")
-                            with col3:
-                                st.metric("📏 Lungh. Media", f"{row['lunghezza_media_caratteri']:.0f} char")
-                            with col4:
-                                st.metric("📊 Dev. Std", f"{row['deviazione_std']:.2f}")
-                            
-                            # Dettagli aggiuntivi
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.caption(f"✅ Positiva: {row['lunghezza_media_positiva']:.0f} caratteri")
-                            with col2:
-                                st.caption(f"❌ Negativa: {row['lunghezza_media_negativa']:.0f} caratteri")
-                            
-                            st.markdown("")  # Spacing
+                        # Mostra 4 metriche chiave (una per bucket)
+                        cols = st.columns(4)
+                        for idx, row in df_emo.iterrows():
+                            with cols[idx % 4]:
+                                ratio = row['negativity_ratio']
+                                color = "normal"
+                                if ratio > 1.5: color = "inverse" # Molto negativo
+                                
+                                st.metric(
+                                    label=row['score_bucket'],
+                                    value=f"{ratio:.2f}x",
+                                    delta="Ratio Negativo/Positivo" if idx==0 else None,
+                                    help=f"Neg: {row['avg_negative_length']:.0f} parole | Pos: {row['avg_positive_length']:.0f} parole"
+                                )
                         
                         st.divider()
                         
-                        # Grafico comparativo
-                        st.markdown("### 📊 Confronto Visivo")
-                        col1, col2 = st.columns(2)
+                        # Grafico Comparativo
+                        st.markdown("### 📉 Parole Positive vs Negative")
+                        st.caption("Confronto lunghezza media delle descrizioni positive (Verde) e negative (Rosso) per ogni fascia di voto.")
                         
-                        with col1:
-                            st.markdown("**Voto Medio per Categoria**")
-                            st.bar_chart(df_len.set_index('categoria_lunghezza')['voto_medio'])
+                        # Prepariamo dati per il grafico
+                        chart_data = df_emo.melt(
+                            id_vars=["score_bucket"], 
+                            value_vars=["avg_positive_length", "avg_negative_length"],
+                            var_name="Tipo", 
+                            value_name="Lunghezza Media (Parole)"
+                        )
                         
-                        with col2:
-                            st.markdown("**Numero Recensioni per Categoria**")
-                            st.bar_chart(df_len.set_index('categoria_lunghezza')['num_recensioni'])
+                        st.bar_chart(
+                            data=chart_data,
+                            x="score_bucket",
+                            y="Lunghezza Media (Parole)",
+                            color="Tipo",
+                            stack=False,
+                            height=400
+                        )
                         
-                        # Insight automatico
-                        st.divider()
-                        highest_rated = df_len.iloc[0]
-                        lowest_rated = df_len.iloc[-1]
+                        # Insight Finale
+                        worst_bucket = df_emo.iloc[0] # Solitamente < 5.0
+                        best_bucket = df_emo.iloc[-1] # Solitamente > 9.0
                         
-                        diff = highest_rated['voto_medio'] - lowest_rated['voto_medio']
+                        ratio_diff = worst_bucket['negativity_ratio']
                         
-                        if diff > 0.3:
-                            st.success(f"📊 **Insight**: Le recensioni **{highest_rated['categoria_lunghezza']}** hanno voti significativamente più alti (+{diff:.2f} punti) rispetto a **{lowest_rated['categoria_lunghezza']}**")
-                        elif diff < -0.3:
-                            st.warning(f"⚠️ **Insight**: Le recensioni **{lowest_rated['categoria_lunghezza']}** hanno voti più bassi (-{abs(diff):.2f} punti) - potrebbero indicare clienti più critici o problemi seri")
+                        if ratio_diff > 1.2:
+                            st.error(f"⚠️ **Effetto Sfogo Confermato**: I clienti arrabbiati scrivono **{ratio_diff:.1f} volte** di più nella parte negativa rispetto a quella positiva!")
                         else:
-                            st.info(f"ℹ️ **Insight**: La lunghezza della recensione ha un impatto limitato sul voto (diff: {diff:.2f})")
-                        
+                            st.info("ℹ️ Comportamento bilanciato: Non c'è una forte asimmetria nella lunghezza delle recensioni.")
+
                     else:
                         st.warning("Nessun dato trovato.")
+
+        # ========= QUERY 5: AFFIDABILITÀ VOTO =========
+        elif "Affidabilità Voto" in query_type:
+            st.subheader("📉 Affidabilità del Voto (Coerenza)")
+            st.markdown("""
+            **Obiettivo**: Misurare se il punteggio medio di un hotel è "affidabile" o se nasconde opinioni molto discordanti.
+            **Metrica**: Usiamo la **Deviazione Standard** (σ). 
+            - **Alta σ (>2.5)**: Hotel "Love or Hate". I clienti o lo amano o lo odiano. Rischioso.
+            - **Bassa σ (<1.5)**: Hotel "Coerente". Sai cosa aspettarti.
+            """)
+            
+            if st.button("🚀 Analizza Affidabilità", type="primary"):
+                with st.spinner("Calcolando dispersione voti..."):
+                    df_std = gestore.query_affidabilita_voto(st.session_state.df_hotel).toPandas()
+                    
+                    if len(df_std) > 0:
+                        # Top 3 Più Controversi
+                        st.markdown("### 🔥 Top 3 Hotel più Controversi")
+                        cols = st.columns(3)
+                        for i in range(min(3, len(df_std))):
+                            row = df_std.iloc[i]
+                            with cols[i]:
+                                st.error(f"**{row['Hotel_Name']}**")
+                                st.metric("Dispersione (σ)", f"{row['stddev_reviewer_score']:.2f}", delta="Molto Polarizzante", delta_color="inverse")
+                                st.caption(f"Voto Medio: {row['mean_reviewer_score']:.2f} | Recensioni: {row['num_reviews']}")
+                        
+                        st.divider()
+
+                        # Tabella Dati
+                        st.markdown("### 📋 Dettaglio Completo")
+                        st.dataframe(
+                            df_std.style.format({
+                                "Average_Score": "{:.1f}",
+                                "mean_reviewer_score": "{:.2f}",
+                                "stddev_reviewer_score": "{:.2f}",
+                                "num_reviews": "{:.0f}"
+                            }),
+                            use_container_width=True,
+                            height=400
+                        )
+                        
+                        # Grafico Scatter: Voto Medio vs Deviazione Standard
+                        st.markdown("### 📈 Mappa Rischio: Qualità vs Affidabilità")
+                        st.caption("Ogni punto è un hotel. In alto a destra: Hotel con voti alti ma incerti.")
+                        
+                        st.scatter_chart(
+                            data=df_std,
+                            x='mean_reviewer_score',
+                            y='stddev_reviewer_score',
+                            color='num_reviews',
+                            size='num_reviews',
+                            height=500
+                        )
+                        
+                        st.info("""
+                        💡 **Insight Lettura Grafico**: Esiste una **Curva dell'Incertezza**.
+                        - ↘️ **In basso a destra**: Hotel Eccellenti (>9.0) hanno bassa deviazione. **Tutti d'accordo: è top.**
+                        - ↖️ **In alto a sinistra**: Hotel Mediocri (<7.5) hanno alta deviazione. **Caos di opinioni: rischioso.**
+                        """)
+                        
+                    else:
+                        st.warning("Nessun dato sufficiente per l'analisi (minimo 100 recensioni per hotel).")
+
+        # ========= QUERY 6: HOTEL RISCHIOSI =========
+        elif "Hotel Rischiosi" in query_type:
+            st.subheader("⚠️ Hotel 'Rischiosi' (Alta Media, Alto Rischio)")
+            st.markdown("""
+            **Obiettivo**: Individuare hotel che sembrano eccellenti (media > 8.0) ma nascondono una quota preoccupante di disastri (voti <= 4.0).
+            **Perché è utile?**: Spesso la media inganna. Un hotel con media 8.5 può avere il 10% di recensioni terribili (es. cimici, furti, rumore insupportabile) che la media nasconde.
+            """)
+            
+            if st.button("🚀 Scansiona Rischi Nascosti", type="primary"):
+                with st.spinner("Cercando hotel rischiosi..."):
+                    df_risky = gestore.query_hotel_rischiosi(st.session_state.df_hotel).toPandas()
+                    
+                    if len(df_risky) > 0:
+                        st.error(f"⚠️ Trovati **{len(df_risky)}** hotel formalmente eccellenti ma con rischio elevato!")
+                        
+                        # Top 3 Rischi
+                        st.markdown("### 🔥 Top 3 'Trappole' Potenziali")
+                        cols = st.columns(3)
+                        for i in range(min(3, len(df_risky))):
+                            row = df_risky.iloc[i]
+                            with cols[i]:
+                                st.error(f"**{row['Hotel_Name']}**")
+                                st.metric("Percentuale Disastri", f"{row['disaster_pct']}%", delta="Rischio Alto", delta_color="inverse")
+                                st.caption(f"Media Ufficiale: {row['Average_Score']} | Disastri totali: {row['disaster_count']}")
+                        
+                        st.divider()
+
+                        # Tabella Dati
+                        st.markdown("### 📋 Lista Completa Hotel Rischiosi")
+                        st.dataframe(
+                            df_risky.style.format({
+                                "Average_Score": "{:.1f}",
+                                "mean_reviewer_score": "{:.2f}",
+                                "disaster_pct": "{:.1f}%",
+                                "total_reviews": "{:.0f}"
+                            }),
+                            use_container_width=True,
+                            height=400
+                        )
+                        
+                        # Grafico Scatter: Media vs % Disastri
+                        st.markdown("### 📉 Analisi Visiva: Ottimi ma Pericolosi")
+                        st.caption("Asse X: Voto Medio (tutti > 8.0). Asse Y: Percentuale di voti <= 4.0.")
+                        
+                        st.scatter_chart(
+                            data=df_risky,
+                            x='mean_reviewer_score',
+                            y='disaster_pct',
+                            color='disaster_count',
+                            size='total_reviews',
+                            height=500
+                        )
+                        st.info("💡 **Lettura**: Più si va in alto nel grafico, più è probabile incappare in una pessima esperienza, nonostante la media alta.")
+                        
+                    else:
+                        st.success("✅ **Nessun hotel rischioso trovato!** Tutti gli hotel con media > 8.0 hanno una percentuale di disastri sotto la soglia di allarme (5%).")
     else:
         st.info("💡 Carica i dati dalla sidebar per iniziare l'analisi.")

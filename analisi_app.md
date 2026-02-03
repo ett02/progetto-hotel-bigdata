@@ -96,10 +96,28 @@ Analisi mirate per rispondere a domande di business precise.
 - **Logica:** Estrae i tag "Couple", "Family", "Solo" dalla stringa dei tag e calcola la soddisfazione media per gruppo.
 - **Output:** Trofeo al target più soddisfatto.
 
-### 📏 D. Lunghezza Recensione (Review Verification)
-- **Domanda:** *Chi scrive un papiro è più arrabbiato?*
-- **Logica:** Calcola la somma dei caratteri (Positiva + Negativa) e classifica in:
-  - *Breve* (<200 char)
-  - *Dettagliato* (200-500 char)
-  - *Molto Dettagliato* (>500 char)
-- **Output:** Voto medio per ogni categoria di lunghezza e avviso se c'è forte discrepanza.
+### 📏 D. Asimmetria Emotiva (Review Length)
+- **Domanda:** *La delusione genera più testo della felicità?*
+- **Logica:**
+  - Suddivide le recensioni in 4 bucket: *Arrabbiato* (<5), *Deluso* (5-7.5), *Soddisfatto* (7.5-9), *Felice* (>9).
+  - Somma il numero di parole negative (`Negative_Review`) e positive (`Positive_Review`) per ogni gruppo.
+  - Calcola il **Negativity Ratio**: Quanto è più lunga la parte negativa rispetto alla positiva?
+- **Output:**
+  - **Metriche**: Ratio per ogni fascia (es. "3.5x" significa che scrivono 3 volte e mezzo in più).
+  - **Grafico**: Barre che confrontano visivamente la "voglia di scrivere" in negativo (Rosso) vs positivo (Verde).
+  - **Insight**: Conferma statistica se l'hotel soffre dell'effetto "Sfogo" (Clienti che scrivono papiri solo per lamentarsi).
+
+### 📉 E. Affidabilità Voto (Data Consistency)
+- **Domanda:** *Il voto medio è affidabile o c'è troppo disaccordo?*
+- **Logica:**
+  - Calcola la **Deviazione Standard** dei voti per ogni hotel.
+  - Bassa deviazione = Opinioni coerenti (Affidabile).
+  - Alta deviazione = Opinioni polarizzate "Love or Hate" (Rischioso).
+- **Output:** Mappa del rischio (Scatter plot) che mostra la relazione tra Qualità e Incertezza.
+
+### ⚠️ F. Hotel Rischiosi (High Risk Detection)
+- **Domanda:** *L'hotel sembra ottimo, ma nasconde scheletri nell'armadio?*
+- **Logica:**
+  - Filtra hotel con **Media > 8.0** (apparentemente eccellenti).
+  - Ma con **> 5% di recensioni disastrose** (voto <= 4.0).
+- **Output:** Lista di "Trappole potenziali": hotel con media alta ma probabilità elevata di pessima esperienza.

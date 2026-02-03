@@ -442,37 +442,136 @@ class GestoreBigData:
 
     def query_lunghezza_recensioni(self, df_hotel):
         """
-        Query 4: 'Review Length Analysis'.
-        Analizza la correlazione tra lunghezza delle recensioni e voto dato.
+        Query 4: 'Asimmetria Emotiva' (Emotional Asymmetry).
+        Analizza se la delusione genera più testo della soddisfazione.
         
-        Ipotesi da verificare:
-        - Clienti molto insoddisfatti scrivono recensioni più lunghe (sfogo)
-        - Recensioni brevi potrebbero essere meno affidabili
+        Logica:
+        1. Suddivide le recensioni in 'Bucket' di voto (es. <5, 5-7, 7-9, >9).
+        2. Calcola la lunghezza media delle parole positive vs negative.
+        3. Calcola il 'Negativity Ratio' (quanto è più lunga la parte negativa).
         """
-        from pyspark.sql.functions import length, when, stddev
+        from pyspark.sql.functions import avg, when, col, lit
         
-        # Calcola lunghezza totale recensione
-        df_len = df_hotel.withColumn("len_pos", length(col("Positive_Review")))
-        df_len = df_len.withColumn("len_neg", length(col("Negative_Review")))
-        df_len = df_len.withColumn("len_totale", col("len_pos") + col("len_neg"))
-        
-        # Categorizza per lunghezza
-        df_len = df_len.withColumn("categoria_lunghezza",
-            when(col("len_totale") > 500, "📝 Molto Dettagliato")
-            .when(col("len_totale") > 200, "✍️ Dettagliato")
-            .otherwise("📄 Breve")
+        # 1. Creazione Bucket di Punteggio
+        # Usiamo Reviewer_Score per creare fasce di soddisfazione
+        df_bucket = df_hotel.withColumn("score_bucket",
+            when(col("Reviewer_Score") < 5.0, "😠 < 5.0 (Arrabbiato)")
+            .when((col("Reviewer_Score") >= 5.0) & (col("Reviewer_Score") < 7.5), "😐 5.0-7.5 (Deluso)")
+            .when((col("Reviewer_Score") >= 7.5) & (col("Reviewer_Score") < 9.0), "🙂 7.5-9.0 (Soddisfatto)")
+            .otherwise("😍 > 9.0 (Felice)")
         )
         
-        # Aggregazione con statistiche
-        result = df_len.groupBy("categoria_lunghezza") \
+        # 2. Aggregazione per Bucket
+        # Calcoliamo la lunghezza MEDIA delle parti positive e negative
+        # Usiamo le colonne pre-calcolate nel dataset: Review_Total_Negative_Word_Counts, Review_Total_Positive_Word_Counts
+        result = df_bucket.groupBy("score_bucket") \
             .agg(
-                avg("Reviewer_Score").alias("voto_medio"),
-                count("*").alias("num_recensioni"),
-                avg("len_totale").alias("lunghezza_media_caratteri"),
-                avg("len_pos").alias("lunghezza_media_positiva"),
-                avg("len_neg").alias("lunghezza_media_negativa"),
-                stddev("Reviewer_Score").alias("deviazione_std")
+                avg("Review_Total_Negative_Word_Counts").alias("avg_negative_length"),
+                avg("Review_Total_Positive_Word_Counts").alias("avg_positive_length")
             ) \
-            .orderBy(col("voto_medio").desc())
+            .withColumn("negativity_ratio", col("avg_negative_length") / (col("avg_positive_length") + 0.001)) \
+            .orderBy("score_bucket")
+            
+        return result
+
+    def query_affidabilita_voto(self, df_hotel):
+        """
+        Query 5: 'Affidabilità del Voto' (Data Consistency).
+        Misura la deviazione standard dei voti per capire se il punteggio medio è rappresentativo.
         
+        Logica:
+        - Hotel con alta deviazione standard (>2.5) sono "Love or Hate" (polarizzanti).
+        - Hotel con bassa deviazione standard (<1.5) sono "Coerenti" (what you see is what you get).
+        """
+        from pyspark.sql.functions import stddev, avg, count, first, col
+        
+        # 1. Raggruppa per Hotel_Name
+        # 2. Calcola media effettiva, deviazione standard e conteggio
+        # Nota: Usiamo first("Average_Score") perché è costante per ogni hotel nel dataset
+        result = df_hotel.groupBy("Hotel_Name") \
+            .agg(
+                first("Average_Score").alias("Average_Score"),          # Voto ufficiale dataset
+                avg("Reviewer_Score").alias("mean_reviewer_score"),     # Media reale calcolata
+                stddev("Reviewer_Score").alias("stddev_reviewer_score"),# Deviazione Standard (quanto oscillano i voti)
+                count("Reviewer_Score").alias("num_reviews")            # Numero totale recensioni
+            ) \
+            .filter(col("num_reviews") >= 100) \
+            .orderBy(col("stddev_reviewer_score").desc())           # Ordina per i più "incerti/polarizzanti"
+            
+        return result
+
+    def query_hotel_rischiosi(self, df_hotel):
+        """
+        Query 6: 'Hotel Rischiosi' (High Risk, High Reward?).
+        Individua hotel con media alta (>8) ma con una percentuale preoccupante di recensioni disastrose (<=4).
+        
+        Logica:
+        - Calcola la % di recensioni <= 4.0 per ogni hotel.
+        - Filtra quelli con media >= 8.0 ma % disastri > 5%.
+        """
+        from pyspark.sql.functions import avg, count, when, col, first, round
+        
+        # 1. Calcoliamo per ogni hotel: media reale, conteggio totale, conteggio disastri
+        result = df_hotel.groupBy("Hotel_Name") \
+            .agg(
+                first("Average_Score").alias("Average_Score"),
+                avg("Reviewer_Score").alias("mean_reviewer_score"),
+                count("*").alias("total_reviews"),
+                count(when(col("Reviewer_Score") <= 4.0, 1)).alias("disaster_count")
+            )
+            
+        # 2. Calcoliamo la percentuale di disastri
+        result = result.withColumn("disaster_pct", round((col("disaster_count") / col("total_reviews")) * 100, 2))
+        
+        # 3. Filtriamo:
+        # - Almeno 50 recensioni (per significatività)
+        # - Media alta (>= 8.0) -> Sembrano ottimi hotel
+        # - Percentuale disastri significativa (>= 5%) -> Rischio nascosto
+        result = result.filter(
+            (col("total_reviews") >= 50) & 
+            (col("mean_reviewer_score") >= 8.0) & 
+            (col("disaster_pct") >= 5.0)
+        ).orderBy(col("disaster_pct").desc())
+        
+        return result
+
+    def query_expectation_gap(self, df_hotel):
+        """
+        Query 7: 'Expectation Gap' Analysis.
+        Analizza la differenza tra Aspettativa (Average_Score) e Realtà (Reviewer_Score).
+        
+        Logica:
+        1. Calcola il Gap = Reviewer_Score - Average_Score per ogni recensione.
+        2. Divide in bucket di 'Prestigio' (basato su Average_Score).
+        3. Misura quanto spesso le aspettative vengono deluse (Gap < 0) e con che intensità.
+        """
+        from pyspark.sql.functions import avg, col, when, abs, count, round
+
+        # 1. Calcolo del Gap (Realtà - Aspettativa)
+        # Gap Negativo = Delusione (es. Voto 6, Media 9 => Gap -3)
+        df_gap = df_hotel.withColumn("gap", col("Reviewer_Score") - col("Average_Score"))
+        
+        # 2. Bucket di Prestigio (Expectation Level)
+        df_gap = df_gap.withColumn("expectation_bucket",
+            when(col("Average_Score") < 7.5, "🥉 Economico (< 7.5)")
+            .when((col("Average_Score") >= 7.5) & (col("Average_Score") < 8.5), "🥈 Standard (7.5-8.5)")
+            .when((col("Average_Score") >= 8.5) & (col("Average_Score") < 9.2), "🥇 Premium (8.5-9.2)")
+            .otherwise("💎 Luxury (> 9.2)")
+        )
+        
+        # 3. Aggregazione per Bucket
+        result = df_gap.groupBy("expectation_bucket") \
+            .agg(
+                avg("gap").alias("avg_gap"), # Gap medio (solitamente vicino a 0)
+                
+                # Percentuale di Gap Negativi (Delusioni)
+                (count(when(col("gap") < 0, 1)) / count("*") * 100).alias("pct_delusioni"),
+                
+                # Intensità media della delusione (solo sui gap negativi)
+                avg(when(col("gap") < 0, col("gap"))).alias("intensita_delusione_media"),
+                 
+                count("*").alias("num_reviews")
+            ) \
+            .orderBy("expectation_bucket")
+            
         return result
