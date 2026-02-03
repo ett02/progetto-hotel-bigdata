@@ -1,0 +1,1056 @@
+
+--- Page 51 ---
+PERCHEʼ USARE SQL CON I BIG DATA?
+SQL è ampiamente utilizzato da sviluppatori, amministratori di database e data 
+scientist grazie ai suoi numerosi vantaggi:
+Linguaggio dichiarativo, che permette di descrivere trasformazioni di dati 
+senza dover specificare il flusso di controllo.
+Interoperabilità, poiché SQL è standardizzato e diverse piattaforme possono 
+implementarlo con sintassi compressibile da parte degli utilizzatori garantendo 
+compatibilità.
+Approccio data-driven, ideale per applicazioni che richiedono elaborazioni 
+complesse su dataset di grandi dimensioni. Le operazioni SQL riflettono 
+trasformazioni e modifiche dei set di dati di input, rendendolo un modello di 
+programmazione conveniente per applicazioni incentrate sui dati in ambienti 
+tradizionali e big data
+Un altro aspetto fondamentale nellʼuso di SQL per i big data è la tecnica della 
+query-in-place, che consente di eseguire query direttamente sui dati senza 
+bisogno di spostarli in un database analitico separato.  La tecnica query-in-place 
+offre un cambio di paradigma nell'analisi dei big data, fornendo un mezzo potente, 
+efficiente e conveniente per estrarre intuizioni fruibili direttamente da enormi set di 
+dati. Questo approccio:
+Evita la duplicazione e il trasferimento di dati, riducendo la complessità e i 
+costi operativi.
+Garantisce un accesso rapido ai dati, migliorando la latenza per interrogazioni 
+SQL ad hoc su dataset di grandi dimensioni, offrendo disponibilità immediata 
+dei dati e riducendo i costi operativi.
+PARTIZIONAMENTO DEI DATI PER LE QUERY
+Il partizionamento dei dati è cruciale per ottimizzare le query su big data. Il 
+partizionamento divide una tabella in più porzioni basate su specifici valori di 
+colonna, creando file o directory separate.
+Riduce il numero di dati letti inutilmente, abbassando i costi di I/O. Migliora la 
+velocità di esecuzione delle query. Tuttavia, un eccesso di partizioni può 
+sovraccaricare il nodo master, che deve mantenere in memoria tutti i metadati.
+MODELLI E TECNICHE PER BIG DATA
+48
+--- Page 52 ---
+MODELLO PGAS
+Il PGAS è un paradigma di programmazione parallela pensato per massimizzare la 
+produttività dei programmatori mantenendo alte prestazioni. L'idea centrale è 
+quella di sfruttare un indirizzamento globale dello spazio di memoria, che offre 
+un compromesso tra la semplicità di programmazione e lʼefficienza nellʼaccesso ai 
+dati, implementando anche una separazione tra accessi ai dati locali e remoti.  
+Questa separazione nell'accesso ai dati è fondamentale per ottenere 
+miglioramenti delle prestazioni e garantire la scalabilità su architetture parallele su 
+larga scala
+Nel modello PGAS, il programma è eseguito da più processi concorrenti, ognuno 
+operante su nodi diversi. Ogni processo ha un rank, che corrisponde allʼindice del 
+nodo su cui è in esecuzione. I processi accedono a una memoria globale 
+condivisa, che è suddivisa in spazi locali e remoti. Gli indirizzi locali sono 
+accessibili direttamente, mentre per accedere a indirizzi remoti servono chiamate 
+API specifiche.
+Un thread o un processo può ottenere un puntatore a dati che si trovano ovunque 
+nel sistema e può leggere o scrivere dati remoti locali ad altri thread. I linguaggi 
+PGAS distinguono tra memoria condivisa (accessibile a tutti i thread) e memoria 
+privata (accessibile solo al thread proprietario). Ogni thread ha la sua porzione di 
+spazio privato e una sezione di spazio condiviso.
+Il modello PGAS supporta tre approcci principali per l'esecuzione parallela:
+MODELLI E TECNICHE PER BIG DATA
+49
+--- Page 53 ---
+ Single Program Multiple Data SPMD Un numero fisso di thread viene 
+avviato all'inizio del programma e ciascuno esegue lo stesso codice.
+ Asynchronous PGAS APGAS All'avvio del programma, un singolo thread 
+avvia l'esecuzione al punto di ingresso del programma. Successivamente, 
+nuovi thread possono essere generati dinamicamente per operare all'interno 
+delle stesse partizioni dello spazio di indirizzamento o di quelle remote. Ogni 
+thread generato può eseguire un codice diverso.
+ Parallelismo implicito Non c'è alcun parallelismo visibile nel codice, come 
+costrutti o direttive parallele, e il programma sembra descrivere un singolo 
+thread di controllo. Tuttavia, più thread di controllo possono essere generati 
+dinamicamente durante il runtime per velocizzare il calcolo
+MEMORIA E COSTO DI PGAS
+Nel modello PGAS, la memoria è suddivisa in places, ovvero nodi di calcolo 
+associati a un processo o thread specifico. Un thread può accedere alla memoria 
+del proprio place con un costo basso e uniforme, mentre lʼaccesso alla memoria di 
+un altro place comporta costi più elevati.
+Questo approccio sfrutta il modello NUMA Non-Uniform Memory Access), che 
+distingue tra accessi economici (dati vicini) e costosi (dati lontani).
+le posizioni di memoria vicine alla fonte della richiesta di accesso sono 
+considerate economiche, mentre le posizioni di memoria distanti sono 
+considerate costose.
+due fattori contribuiscono al calcolo del costo: il luogo di origine della richiesta 
+di accesso e il luogo in cui si trovano i dati richiesti
+I linguaggi basati su PGAS adottano diversi schemi di distribuzione dei dati:
+ Ciclico: i dati vengono suddivisi in blocchi consecutivi distribuiti ciclicamente 
+tra i nodi.
+ Blocco: i dati vengono suddivisi in blocchi di dimensione fissa, assegnati ai 
+diversi nodi.
+ Blocco-ciclico: i dati sono divisi in blocchi di dimensione parametrizzabile e 
+distribuiti in modo ciclico.
+MODELLI E TECNICHE PER BIG DATA
+50
+--- Page 54 ---
+MODELLI: SISTEMA EXASCALE
+I sistemi exascale rappresentano unʼopportunità promettente, ma la loro 
+progettazione e implementazione sono complesse a causa di sfide come 
+scalabilità, latenza di rete, affidabilità e robustezza delle operazioni sui dati. La 
+gestione efficiente di enormi volumi di dati richiede algoritmi scalabili capaci di 
+partizionare e analizzare i dati attraverso milioni di operazioni parallele. I moderni 
+sistemi HPC High-Performance Computing) necessitano di modelli di 
+programmazione scalabili per ottenere prestazioni ottimali, supportando i 
+programmatori nella gestione della complessità di milioni o miliardi di thread 
+concorrenti.
+Un modello di programmazione scalabile per sistemi exascale dovrebbe includere 
+i seguenti meccanismi:
+Accesso parallelo ai dati, per migliorare la larghezza di banda accedendo 
+contemporaneamente a diversi elementi.
+Resilienza ai guasti, per gestire i fallimenti durante le comunicazioni non 
+locali.
+Comunicazione locale basata sui dati, per limitare lo scambio di dati.
+Elaborazione dei dati su gruppi limitati di core in specifiche macchine 
+exascale.
+Sincronizzazione vicino ai dati, riducendo il sovraccarico generato dalla 
+sincronizzazione tra core distanti.
+Analisi in-memory, per diminuire i tempi di reazione memorizzando i dati nella 
+RAM dei nodi di elaborazione.
+Selezione dei dati basata sulla località, per ridurre la latenza mantenendo un 
+sottoinsieme di dati localmente disponibile.
+LIMITAZIONI ODIERNE
+Le soluzioni tradizionalmente utilizzate nei sistemi HPC (come MPI, OpenMP e 
+MapReduce) non sono sufficienti o adatte per la programmazione di software 
+destinato a sistemi exascale.
+MODELLI E TECNICHE PER BIG DATA
+51
+--- Page 55 ---
+Le  proprietà essenziali dei modelli di programmazione influenzate dalla 
+transizione all'exascale sono:
+Pianificazione dei thread
+Comunicazione
+Sincronizzazione
+Distribuzione dei dati
+Controllo visivo
+I sistemi exascale attuali mirano al parallelismo con memoria distribuita, quindi si 
+prevede unʼadozione parziale dellʼarchitettura a passaggio di messaggi. 
+Sebbene lʼMPI Message Passing Interface) abbia dimostrato efficacia con milioni 
+di core in scenari specifici, presenta alcune sfide:
+Richiede agli utenti di gestire aspetti della parallelizzazione come distribuzione 
+di dati e lavoro, comunicazione e sincronizzazione.
+È progettato principalmente per una distribuzione statica dei dati, risultando 
+inadatto al bilanciamento dinamico del carico.
+Problemi di scalabilità derivano dalla comunicazione many-to-many (molti-a-
+molti) nel passaggio di messaggi, che presuppone una rete completamente 
+connessa con modelli di comunicazione densi.
+LʼI/O diventa un collo di bottiglia nei sistemi basati su MPI, suggerendo la 
+necessità di rivedere il modello attuale.
+I sistemi exascale dovranno supportare centinaia di core su una singola CPU o 
+GPU. Lʼuso di sistemi paralleli a memoria condivisa di medie dimensioni 
+rappresenta un'alternativa praticabile al passaggio di messaggi, poiché trasferisce 
+la responsabilità della parallelizzazione dal programmatore al compilatore. I 
+modelli di programmazione a memoria condivisa spesso adottano un modello di 
+controllo del parallelismo che non gestisce la distribuzione dei dati e impiega 
+meccanismi di sincronizzazione non scalabili, come lock o sezioni atomiche. La 
+visione globale dei dati promuove la sincronizzazione congiunta degli accessi 
+remoti ai dati da parte di tutti i thread, rendendola comparabile agli accessi locali, 
+con un impatto negativo sullʼefficienza della programmazione.
+MODELLI E TECNICHE PER BIG DATA
+52
+--- Page 56 ---
+I cluster composti da nodi eterogenei, che combinano CPU multi-core e GPU, 
+sono sempre più utilizzati nei sistemi HPC grazie ai benefici in termini di 
+prestazioni di picco ed efficienza energetica. Per sfruttare appieno queste 
+piattaforme, gli sviluppatori spesso utilizzano una combinazione di paradigmi di 
+programmazione parallela. Tuttavia, questa programmazione eterogenea 
+introduce nuove sfide nella gestione di ambienti di esecuzione e modelli di 
+programmazione differenti. Data la propensione agli errori nella programmazione 
+su queste piattaforme, è necessaria lʼintroduzione di nuove astrazioni, modelli di 
+programmazione e strumenti per affrontare queste sfide.
+LINGUAGGI PER IL MODELLO EXASCALE
+Le applicazioni parallele sui sistemi exascale devono gestire milioni di thread in 
+esecuzione su una vasta gamma di core. Implementare strategie per minimizzare 
+la sincronizzazione, ridurre la comunicazione e lʼuso della memoria remota e 
+infine affrontare eventuali guasti software e hardware.
+Alcuni modelli di programmazione proposti per gli ambienti exascale includono:
+Legion
+Legion è un modello di programmazione a memoria distribuita progettato per 
+alte prestazioni su architetture parallele eterogenee. Lʼorganizzazione dei dati 
+si basa sullʼuso di regioni logiche, che possono essere allocate, rimosse e 
+utilizzate per memorizzare gruppi di oggetti in strutture dati. Le regioni 
+possono essere fornite come input a funzioni specifiche, chiamate task, che 
+leggono dati in regioni specifiche e forniscono informazioni sulla località. Le 
+regioni logiche possono essere suddivise in sotto-regioni distinte o 
+sovrapposte, fornendo informazioni cruciali per valutare lʼindipendenza dei 
+calcoli.
+Charm++
+Charm++ è un modello di programmazione a memoria distribuita in cui un 
+programma definisce collezioni di oggetti interagenti mappati dinamicamente 
+sui processori dal sistema di runtime. Utilizza un approccio asincrono, basato 
+su messaggi e task, con oggetti mobili. Gli oggetti possono essere migrati tra 
+processori, permettendo alle operazioni di inviare dati a oggetti logici anziché 
+a processori fisici. Charm++ sfrutta lʼoverdecomposition, dividendo le 
+MODELLI E TECNICHE PER BIG DATA
+53
+--- Page 57 ---
+applicazioni in molti piccoli oggetti che rappresentano unità di lavoro o dati, 
+spesso superando il numero di processori disponibili.
+DCEx
+DCEx è un modello di programmazione basato su PGAS per applicazioni 
+parallele su larga scala nei sistemi exascale. Costruito su operazioni di base 
+data-aware, permette lʼuso scalabile di un numero massivo di elementi di 
+elaborazione. Riduce lo scambio di dati tra thread concorrenti e impiega la 
+sincronizzazione vicino ai dati, consentendo ai thread di eseguire calcoli in 
+prossimità dei dati stessi. Un programma DCEx è strutturato in blocchi di dati 
+paralleli, che fungono da unità di memoria per calcolo parallelo, 
+comunicazione e migrazione.
+X10
+X10 è un modello basato su APGAS che introduce il concetto di location come 
+astrazione del contesto computazionale. Ogni location offre una vista 
+localmente sincrona della memoria condivisa. Le computazioni in X10 si 
+svolgono in più places, ognuno contenente dati ed eseguendo task (thread 
+leggeri) che possono essere create dinamicamente. Le attività possono 
+accedere sincronicamente a una o più regioni di memoria all'interno della loro 
+place di appartenenza.
+Chapel
+Chapel è un modello di programmazione basato su APGAS, che utilizza 
+astrazioni di alto livello per la programmazione parallela generale. Fornisce 
+strutture dati con vista globale e una visione globale del controllo, 
+migliorando il livello di astrazione sia per i dati che per il flusso di controllo. Le 
+strutture dati con vista globale includono array e altre aggregazioni di dati, la 
+cui dimensione e i cui indici vengono rappresentati globalmente, anche se 
+lʼimplementazione è distribuita su più nodi del sistema parallelo. Un local in 
+Chapel rappresenta un'astrazione di un'unità di memoria uniforme 
+nell'architettura di destinazione, garantendo che tutti i thread all'interno di un 
+locale abbiano tempi di accesso simili a una determinata locazione di 
+memoria. La visione globale del controllo significa che un'applicazione inizia 
+MODELLI E TECNICHE PER BIG DATA
+54
+--- Page 58 ---
+con un singolo thread logico di esecuzione, introducendo parallelismo 
+attraverso concetti specifici del linguaggio.
+UPC
+UPC è una libreria per C progettata per la programmazione basata su 
+PGAS, che fornisce strumenti per descrivere le dipendenze tra calcoli 
+asincroni e il trasferimento di dati. La libreria supporta una comunicazione 
+one-sided efficiente, permettendo di spostare il calcolo vicino ai dati 
+attraverso chiamate di procedura remota (RPC), facilitando l'implementazione 
+di strutture dati distribuite complesse.
+UPC si basa su tre concetti principali di programmazione:
+Puntatori globali, che consentono un utilizzo efficiente della località dei 
+dati.
+Programmazione asincrona basata su RPC, che permette lo sviluppo 
+efficace di programmi asincroni.
+Futures, per gestire la disponibilità dei dati generati dai calcoli.
+TOOLS: APACHE HADOOP
+Apache Hadoop è il framework open-soure più popolare per implementare il 
+modello di programmazione MapReduce
+Hadoop è progettato per sviluppare applicazione data-intensive e scalabili in 
+diversi linguaggi di programmazione Java, Python) per essere eseguite in 
+parallelo su sistemi distribuiti
+L'approccio di programmazione in Hadoop consente l'astrazione dai classici 
+problemi di elaborazione distribuita, tra cui la località dei dati, il bilanciamento del 
+MODELLI E TECNICHE PER BIG DATA
+55
+--- Page 59 ---
+carico di lavoro, la tolleranza agli errori e il risparmio di larghezza di banda della 
+rete.
+Esistono anche altre implementazioni minori del modello MapReduce. Tra queste 
+troviamo:
+ Phoenix++: basato su C  utilizza chip multi-core e multi-processori a 
+memoria condivisa. Il suo runtime gestisce la creazione di thread, il 
+partizionamento dei dati, la pianificazione dinamica delle attività e la tolleranza 
+agli errori.
+Sailfish :  framework MapReduce che sfrutta la trasmissione in batch dai 
+mapper ai reducer. Utilizza un'astrazione chiamata I-file per supportare 
+l'aggregazione dei dati, raggruppando in modo efficiente i dati scritti e letti da 
+più nodi.
+CARATTERISTICHE E MODULI
+Apache Hadoop è un framework comunemente utilizzato per l'elaborazione batch, 
+ma è inefficiente per le applicazioni altamente interattive con lʼutente a causa 
+dell'elaborazione su disco nel file system distribuito
+Il progetto Hadoop è supportato da una vasta comunità open source, che fornisce 
+aggiornamenti costanti e correzioni di bug.
+Hadoop fornisce un basso livello di astrazione (low-level abstraction): i 
+programmatori definiscono le applicazioni utilizzando API potenti ma non user-
+friendly, che richiedono una comprensione di basso livello del sistema. Lo 
+sviluppo in Hadoop richiede più impegno e codice rispetto ai sistemi di astrazione 
+di livello superiore (ad esempio, Pig o Hive), ma il codice è generalmente più 
+efficiente in quanto può essere completamente ottimizzato.
+Hadoop è progettato per sfruttare il parallelismo dei dati (data-parallelism), 
+poiché i dati di input sono partizionati in blocchi ed elaborati in parallelo da 
+macchine diverse.
+Il framework garantisce anche un'elevata tolleranza ai guasti grazie a checkpoint 
+e meccanismi di ripristino
+Il progetto Hadoop include molti altri moduli, come:
+MODELLI E TECNICHE PER BIG DATA
+56
+--- Page 60 ---
+Hadoop Distributed File System HDFS: un file system distribuito che offre 
+tolleranza ai guasti con ripristino automatico, portabilità su hardware e sistemi 
+operativi eterogenei e a basso costo.
+Yet Another Resource Negotiator YARN: un framework per la gestione delle 
+risorse del cluster e lo scheduling dei Job.
+Hadoop Common: librerie e altri strumenti utili che supportano gli altri moduli 
+Hadoop.
+Nel corso degli anni, Hadoop si è evoluto in una piattaforma versatile che supporta 
+molti sistemi di programmazione, come, Storm per l'analisi dei dati in streaming, 
+Hive per l'interrogazione di grandi set di dati, Giraph per l'elaborazione iterativa 
+dei grafici e Ambari per il provisioning e il monitoraggio del cluster
+SOFTWARE STACK DI HADOOP
+HDFS
+Il file system distribuito Hadoop HDFS è stato progettato per archiviare grandi 
+volumi di dati, garantendo allo stesso tempo una lettura veloce e tolleranza ai 
+guasti.
+I file in HDFS vengono distribuiti e replicati su diversi nodi di archiviazione, 
+supportando l'organizzazione gerarchica dei file come i file system tradizionali.
+Un cluster HDFS ha un'architettura master-worker ed è costituito da:
+MODELLI E TECNICHE PER BIG DATA
+57
+--- Page 61 ---
+un namenode (master) che gestisce il file system distribuito, mantenendo 
+l'albero del file system e archiviando nomi e metadati;
+un insieme di datanode (worker) che archiviano e recuperano blocchi di dati, 
+comunicando periodicamente con il namenode;
+un namenode secondario opzionale per la tolleranza ai guasti, che archivia lo 
+stato del file system in caso di errori del namenode.
+HDFS memorizza i file come una sequenza di blocchi di dati (data blocks), 
+ognuno dei quali rappresenta la quantità minima di dati per la lettura o la scrittura. 
+La dimensione predefinita del blocco è 128 MB, ma può essere configurata. Per la 
+tolleranza agli errori, ogni blocco viene replicato tra i nodi dati con un fattore di 
+replicazione noto, configurabile durante la creazione e la modifica del file.  
+Hadoop sfrutta la località dei dati per l'efficienza quando distribuisce i lavori di 
+elaborazione tra i worker, riducendo al minimo il trasferimento di dati sulla rete, 
+riducendo la congestione e aumentando la produttività complessiva del sistema
+FLUSSO DI ESECUZIONE
+Il flusso di esecuzione in Hadoop coinvolge diversi componenti:
+ Input Data: i file di input per un job MapReduce, in genere archiviati su HDFS.
+InputFormat: definisce come i dati di input vengono suddivisi e letti per creare 
+suddivisioni di input (input slpits).
+InputSplit: rappresenta la porzione di dati che verrà elaborata da una singola 
+istanza di un mapper. Ogni suddivisione viene suddivisa in record prima di 
+MODELLI E TECNICHE PER BIG DATA
+58
+--- Page 62 ---
+essere elaborata
+RecordReader: converte una suddivisione di input in coppie chiave-valore 
+adatte a essere lette
+ed elaborate dal mapper.
+Mapper: questo componente applica a ogni coppia chiave-valore una 
+funzione di mappatura che
+produce un elenco di coppie chiave-valore come output.
+Combiner: esegue l'aggregazione locale dell'output del mapper, mirando a 
+minimizzare il trasferimento di dati intermedi tra mapper e reducer.
+Partitioner: partiziona l'output dal combiner utilizzando una funzione di 
+hashing in modo che le tuple con la stessa chiave vadano nella stessa 
+partizione.
+Shuffle and Sorting: ogni partizione generata dal partitioner viene trasferita 
+attraverso la rete ai nodi reducer (shuffling). Tuttavia, prima di inviare i dati, il 
+framework Hadoop esegue su di essi l'ordinamento per chiave.
+Reducer: esegue l'aggregazione finale applicando una funzione di riduzione 
+sui dati.
+RecordWriter: è responsabile della scrittura delle coppie chiave-valore di 
+output dalla
+fase di riduzione nei file di output. Un componente, denominato 
+OutputFormat, definisce come
+le coppie chiave-valore di output vengono scritte nei file di output dal record 
+writer
+MODELLI E TECNICHE PER BIG DATA
+59
+--- Page 63 ---
+PROGRAMMAZIONE DEL FRAMEWORK
+Un programma MapReduce è costituito da almeno tre parti:
+un mapper, che estende la classe Mapper per fornire un'implementazione 
+personalizzata del metodo map;
+un reducer, che estende la classe Reducer per fornire un'implementazione 
+personalizzata del metodo reduce;
+un driver, che configura il job MapReduce e contiene la parte principale del 
+programma.
+CLASSE MAPPER
+La classe Mapper è definita nel seguente modo:
+La classe include i seguenti metodi che possono essere sovrascritti (override):
+void setup(Context context), che viene chiamato una volta all'inizio del task.
+ void map(KEYIN key, VALUEIN value, Context context), che è il metodo map 
+chiamato una volta per ogni coppia chiave-valore nella suddivisione di input.
+void cleanup(), che viene chiamato alla fine dell'attività map.
+CLASSE REDUCER
+La classe Reducer è definita nel seguente modo:
+La classe include i seguenti metodi che possono essere sovrascritti (override):
+void setup(Context context), che viene chiamato una volta all'inizio del task.
+ void reduce(KEYIN key, iterable<VALUEIN values, Context context), che è 
+il metodo reduce chiamato una volta per ogni chiave per elaborare tutti i valori 
+associati ad essa.
+void cleanup(), che viene chiamato alla fine dell'attività reduce.
+MODELLI E TECNICHE PER BIG DATA
+60
+Da aggiungere PowerPoint 09 Tools - HDFS overview
+--- Page 64 ---
+CLASSE DRIVER
+La classe Driver è responsabile della configurazione di vari aspetti del job 
+MapReduce da eseguire in Hadoop, tra cui, il nome, i tipi di dati di input/output, le 
+classi mapper e reducer e altri parametri.
+L'oggetto 
+Context consente sia al mapper che al reduce di interagire con il resto del sistema 
+Hadoop, consentendo loro di accedere ai dati di configurazione per il job 
+MapReduce e di emettere output
+SECONDARY SORT
+Hadoop ordina le tuple chiave-valore intermedie in base alla chiave prima di 
+inviarle al reducer.
+L'
+ordinamento secondario è una tecnica che consente di controllare l'ordinamento 
+utilizzando una chiave composita <primary_key, secondary_key> per le tuple 
+intermedie. In particolare:
+ viene definito un partizionatore personalizzato per assegnare tutte le tuple con 
+la stessa chiave primaria a un singolo nodo reducer;
+ viene utilizzato un comparatore di ordinamento personalizzato per ordinare le 
+tuple utilizzando l'intera chiave composita;
+ infine, utilizzando un comparatore di gruppo personalizzato, le tuple ordinate 
+vengono raggruppate in base alla chiave primaria prima di essere inviate alla 
+chiamata del metodo reduce.
+Un esempio applicativo è il seguente. Utilizzando una chiave composita <user_id, 
+timestamp>, le tuple possono essere partizionate in base all'ID utente, ordinate 
+utilizzando la chiave composita e raggruppate in base all'ID utente prima di essere 
+elaborate dal reducer.
+ESEMPIO DI APPLICAZIONE HADOOP
+Hadoop può essere utilizzato per creare un inverted index per un ampio set di 
+documenti web, che è un componente fondamentale dei sistemi di indicizzazione 
+dei motori di ricerca.
+Unʼinverted index è una struttura dati contenente un set di parole (termini di 
+MODELLI E TECNICHE PER BIG DATA
+61
+--- Page 65 ---
+indice) e che specifica, per ogni parola, gli ID di tutti i documenti che la 
+contengono e il numero di occorrenze.
+Il flusso di esecuzione e i componenti principali Mapper, Reducer, Combiner) per 
+unʼapplicazione inverted index sviluppata con il framework Hadoop
+La classe MapTask implementa il mapper, che riceve un elenco di documenti da 
+elaborare come input. Il metodo map della classe deve:
+ Catturare il documentID, che è il nome file del documento attualmente 
+elaborato.
+ Analizzare le righe di testo provenienti dai documenti di input ed emettere una 
+coppia
+<word, documentID  numberOfOccurrences>, dove numberOfOccurrences  
+1.
+Ogni parola può essere preelaborata con comuni funzioni di elaborazione del 
+testo, come
+rimozione della punteggiatura, lemmatizzazione e stemming.  Hadoop usa Text e 
+MODELLI E TECNICHE PER BIG DATA
+62
+--- Page 66 ---
+IntWritable invece di String e Integer per ottenere una gestione più leggera della 
+serializzazione degli oggetti.
+La classe CombineTask implementa il combiner, un reducer utilizzato per 
+aggregare i dati intermedi prodotti dai mapper. Il metodo reduce implementa la 
+logica del combiner sommando tutte le occorrenze di ogni parola che compaiono 
+più volte in un documento ed emette un elenco di coppie <word, documentID  
+sumNumberOfOccurrences>
+MODELLI E TECNICHE PER BIG DATA
+63
+--- Page 67 ---
+La classe ReduceTask implementa la classe Reducer che, per ogni parola, 
+produce l'elenco di tutti i documenti che la contengono e il numero di occorrenze 
+in ogni documento 
+<word, List(documentID  numberOfOccurrences)>
+L'insieme di tutte le coppie di output generate dalla funzione reduce forma 
+l'inverted index per i documenti di input
+MODELLI E TECNICHE PER BIG DATA
+64
+--- Page 68 ---
+L'elenco mostra la classe driver utilizzata per impostare ed eseguire l'applicazione 
+Hadoop. Il job viene configurato specificando: le classi da utilizzare come mapper, 
+combiner e reducer, i formati chiave/valore di input e output utilizzati da queste 
+classi, i percorsi di input/output dei dati
+MODELLI E TECNICHE PER BIG DATA
+65
+--- Page 69 ---
+TOOLS: SISTEMI STREAMING
+ Un sistema di streaming è motore di elaborazione dati progettato per elaborare 
+dati illimitati.
+I Dati limitati sono set di dati di dimensioni finite, mentre i Dati illimitati sono 
+costituiti da un set di dati di dimensioni (teoricamente) infinite.
+Concettualmente infinito, uno stream è costituito da dati illimitati in continua 
+crescita di elementi o eventi. Praticamente consiste in un flusso di dati continuo 
+che deve essere processato e analizzato
+Diversi modello di processamento dei dati. Quando la produzione è controllata da 
+una sorgente si parla di Push Model. Esistono anche altri modi alternativi tra cui il 
+Publish/subsribe Model.
+Molto importante  nei sistemi di streaming è il concetto di tempo. Spesso è 
+necessario capire quando i dati sono prodotti e quando i dati potranno essere 
+MODELLI E TECNICHE PER BIG DATA
+66
+--- Page 70 ---
+processati. Esistono diversi approcci basati sul tempo:
+Event time: Tempo necessario per produrre un singolo dato
+Ingenstion time: Istante di tempo in cui il sistema riceve il dato da processare
+Processing time: Istante di tempo in cui il sistema ha terminato di elaborare il 
+singolo dato
+Una serie temporale è una serie di punti dati indicizzati in ordine temporale. Più 
+comunemente, una serie temporale è una sequenza presa in punti successivi 
+equamente distanziati nel tempo.
+MODELLI E TECNICHE PER BIG DATA
+67
+--- Page 71 ---
+MODELLO REGISTRATORE DI CASSA vs TORNELLO
+Dato un vettore   aggiornato attraverso uno stream. Nella fase 
+iniziale tutti  . Esistono due approcci per aggiornare il vettore:
+Registratore di cassa
+Ogni aggiornamento è nella forma   quindi gli   sono incrementati da 
+un numero positivo pari a  
+Tornello
+Ogni aggiornamento è nella forma   quindi gli   sono incrementai da 
+un qualche numero (anche negativo) pari a  
+ALGORITMI DI STREAMING
+Sono algoritmi per l'elaborazione di flussi di dati in cui l'input viene presentato 
+come una sequenza di elementi e può essere esaminato in pochi passaggi (in 
+genere solo uno). Questi algoritmi possono avere accesso a una memoria limitata 
+e ad un tempo di elaborazione limitato per elemento.
+Esistono quattro approcci diversi per il processamento dei dati
+ELABORAZIONE INDIPENDENTE DAL TEMPO
+L'elaborazione time-agnostic viene utilizzata nei casi in cui il tempo è 
+essenzialmente irrilevante
+MODELLI E TECNICHE PER BIG DATA
+68
+--- Page 72 ---
+Due esempi: Filtraggio, Inner Join
+FILTRAGGIO
+Vogliamo elaborare i log del traffico web per filtrare tutto il traffico che non ha 
+avuto origine da un dominio specifico. Possiamo esaminare ogni record 
+quando arriva, vedere se appartiene
+al dominio di interesse e scartarlo in caso contrario. Dato che questo dipende 
+da un singolo elemento in qualsiasi momento, il fatto che la fonte dati abbia 
+una distorsione variabile del tempo dell'evento è irrilevante
+La figura mostra un esempio di filtraggio di dati illimitati: una raccolta di dati 
+(che scorre da sinistra a destra) di vari tipi viene filtrata in una raccolta 
+omogenea contenente un singolo tipo
+INNER JOIN
+Vogliamo unire due fonti di dati illimitate. Quando vediamo un valore da una 
+fonte, possiamo metterlo in buffer; dopo che arriva il secondo valore dall'altra 
+fonte, emettiamo il record unito.
+Dato che ci interessano solo i risultati di un join quando arriva un elemento da 
+entrambe le fonti, non c'è alcun elemento temporale nella logica.
+MODELLI E TECNICHE PER BIG DATA
+69
+--- Page 73 ---
+La figura mostra un esempio di esecuzione di un inner join su dati illimitati. I 
+join vengono prodotti quando vengono osservati elementi di abbinamento da 
+entrambe le fonti
+ELABORAZIONE APPROSSIMATA
+L'elaborazione approssimativa si basa su algoritmi che producono una risposta 
+approssimativa basata su un riepilogo o "schizzo" del flusso di dati. Alcuni 
+esempi: Top-N approssimativo, streaming k-means
+WINDOWING
+La fonte dei dati (sia illimitata che limitata), viene suddivisa lungo i confini 
+temporali in blocchi finiti per l'elaborazione. Tre tipi di finestra: Fissa, Slicing e 
+Sessione
+WINDOWING IN BASE AL TEMPO DI ELABORAZIONE
+Il sistema memorizza i dati in arrivo in finestre finché non è trascorso un certo 
+periodo di tempo di elaborazione. Esempio: memorizzazione dei dati per   
+minuti di tempo di elaborazione, dopodiché tutti i dati in quel intervallo di 
+tempo vengono inviati per l'elaborazione
+MODELLI E TECNICHE PER BIG DATA
+70
+↑dottouninsiemedielementitrovareitopNdoveNeunnumero.
+Esempiodiclusteringapprossimato:
+--- Page 74 ---
+Windowing
+•The data source (eitherunboundedor bounded), 
+ischoppedup alongtemporalboundariesinto
+finite chunksfor processing.
+•Three patterns:
+•Fixedwindows
+•Slidingwindows
+•Sessions
+16
+wif
+--- Page 75 ---
+Questa figura mostra la suddivisione in finestre fisse in base al tempo di 
+elaborazione: i dati vengono raccolti in finestre in base all'ordine in cui 
+arrivano nella pipeline
+WINDOWING IN BASE AGLI EVENTI
+Questo viene utilizzato quando dobbiamo osservare una fonte di dati in 
+blocchi finiti che riflettono i tempi in cui tali eventi si sono effettivamente 
+verificati. Più complesso del windowing in base al tempo di elaborazione (ad 
+esempio, richiede un buffering maggiore dei dati). Spesso non abbiamo modo 
+di sapere quando abbiamo visualizzato tutti i dati per una determinata finestra
+I dati sono collezzionati in finestre di dimensione dissata in base allʼistante di 
+tempo in cui vengono generati
+I dati sono collezionati in finestre di sessione basate sullʼistante di tempo di 
+apparizione del dato
+OPERAZIONI DI BASE SUGLI STREAM
+MODELLI E TECNICHE PER BIG DATA
+71
+--- Page 76 ---
+Le operazioni di base che si possono effettuare su uno stream sono di due nature 
+diverse. Il primo consiste nellʼaggregazione delle finestre mentre il secondo 
+nellʼunione delle finestre
+ESEMPIO DI AGGREGAZIONE
+OPERAZIONI COMPLESSE PER LʼELABORAZIONE AD 
+EVENTI
+Tra le operazioni complesse che possono essere effettuate sugli stream troviamo 
+la ricerca di pattern significativi nel flusso. Gli eventi complessi possono essere 
+definiti usando la logica e le condizioni temporali. Per gli eventi complessi, invece, 
+si sceglie di modellare il sistema con un NFA
+BIG DATA STREAMING
+REQUISITI
+Mantenere i dati in movimento Architettura dello stream)
+Accesso dichiarativo StreamSQL
+Gestione delle imperfezioni (ritardi, mancanze, elementi non ordinati)
+Risultati prevedibili (consistenza, eventi temporali)
+Integrazione della memoria e flusso dati (sistemi ibridi stream/batch)
+Sicurezza e disponibilità dei dati (tolleranza ai guasti, stato durevole)
+MODELLI E TECNICHE PER BIG DATA
+72
+--- Page 77 ---
+Scalabilità e partizionamento automatico
+Processamento istantaneo e risposta rapida
+ELABORAZIONE DI STREAM BIG DATA
+I database possono processare una grande quantità di dati, però non possono 
+essere utilizzati perché i Big data non sono completamente strutturati. Lʼidea è 
+capire i dati attraverso operazioni di selezione, proiezione e unione.
+MAP REDUCE
+Buono per grandi quantità di dati statici. Per  gli stream invece si adatta bene 
+solo con finestre molto grandi. Inoltre i dati non si muovono quindi si ha alta 
+latenza e bassa efficenza
+MINIBATCH
+Facile da implementare con ottimi risultati sulla consistenza dei dati e sulla 
+tolleranza ai guasti. Non è applicabile per lʼelaborazione ad eventi o a sessione
+ARCHITETTURA DEI SISTEMI STREAMING
+MODELLI E TECNICHE PER BIG DATA
+73
+--- Page 78 ---
+Il programma può essere descritto da un DAG di operazione applicate su stream 
+intermedi, realizzati con stream logici di record. Le operazioni sono sia 
+computazioni sia passaggi di stato. Le possibili trasformazioni che si possono 
+applicare ai dati sono: Map, Reduce,Filter,CoMap, Join, ecc…
+WATERMARKS
+I dati potrebbero giungere nel sistema in anticipo, in orario o in ritardo. Per ovviare 
+a questa problematica si possono utilizzare i watermark.
+ Catturano il progresso della completezza del tempo-evento man mano che il 
+tempo di elaborazione avanza.
+ Possono essere definiti come una funzione  , che prende un punto 
+nel tempo di elaborazione e restituisce un punto nel tempo dell'evento.
+ Quel punto nel tempo dell'evento, E, è il punto fino al quale il sistema ritiene di 
+aver osservato tutti gli input con tempi evento inferiori a E.
+  In altre parole, è un'affermazione secondo cui non verranno più visti dati con 
+tempi evento inferiori a E.
+WATERMARK PERFETTI vs WATERMARK EURISTICI
+Quando abbiamo una conoscenza perfetta dei dati di input, è possibile costruire 
+una filigrana perfetta. In questo caso, tutti i dati sono in anticipo o puntuali. Le 
+filigrane euristiche utilizzano qualsiasi informazione per fornire una stima del 
+progresso che sia il più accurata possibile. Vengono utilizzate quando la 
+conoscenza perfetta dei dati di input è impraticabile.
+TOOLS: SPARK
+MODELLI E TECNICHE PER BIG DATA
+74
+--- Page 79 ---
+2
+
+--- Page 80 ---
+3
+
+--- Page 81 ---
+Spark è un framework e un motore general-purpose, veloce per lʼelaborazione dei 
+Big data. Spark non è una versione modificata di Hadoop ma si integra 
+perfettamente nel suo ecosistema. Eʼ la piattaforma leader per SQL su larga scala, 
+elaborazione batch, elaborazione di stream e anche negli ultimi tempo piattaforma 
+dedicata al machine learning. 
+Caratteristica principale di Spark è un unico motore analitico per una grande 
+quantità di elaborazioni dati.
+Il processamento dei dati avviene in-memory rendendolo molto veloce nelle 
+elaborazioni iterative. La sua velocità è circa superiore di 10 volte (10x) rispetto ad 
+Hadoop
+Adatto anche per elaborazioni su grafi con potenti ottimizzazioni built-in.
+Un altro punto di forza di Spark è la sua compatibilità con le API dello storage 
+Hadoop. Infatti si integra perfettamente con i sistemi supportati da Hadoop incluso 
+il file system HDFS
+SPARK vs HADOOP MAP-REDUCE
+La condivisione dei dati in Hadoop è lenta a causa della replicazione, 
+serializzazione e operazioni di I/O sul disco
+MODELLI E TECNICHE PER BIG DATA
+75
+--- Page 82 ---
+In Spark invece si utilizza la RAM distribuita (distributed in-memory) che è circa 
+100x più veloce delle operazioni su disco e della rete
+Paradigma di programmazione di base simile a MapReduce. Fondamentalmente 
+"scatter-gather": dati e calcoli sparsi su più nodi del cluster che vengono eseguiti 
+in parallelo su porzioni di dati; raccolta dei risultati finali.
+Spark offre un modello di dati più generale tra cui RDD, DataSet, DataFrame
+Spark offre un modello di programmazione più generale e intuitivo, la funzione 
+map diventa una trasformazioni in Spark, la funzione reduce invece diventa 
+unʼazione in Spark
+MODELLI E TECNICHE PER BIG DATA
+76
+--- Page 83 ---
+Possono essere utilizzati anche diverse tipologie di database non solo HDFS, ma 
+anche Cassandra, S3, file Parquet, ecc…
+SPARK STACK
+SPARK CORE E MOTORE UNICO
+Fornisce funzionalità di base (tra cui pianificazione delle attività, gestione della 
+memoria, ripristino degli errori, interazione con i sistemi di archiviazione) utilizzate 
+da altri componenti. Fornisce un'astrazione dei dati chiamata resilient distributed 
+dataset RDD, una raccolta di elementi distribuiti su molti nodi di elaborazione 
+che possono essere manipolati in parallelo. Spark Core fornisce molte API per la 
+creazione e la manipolazione di queste raccolte, progettate nel linguaggio  Scala 
+ma perfettamente integrate con API per Java, Python e R.
+Il motore unico consiste in un certo numero di moduli integrati di alto livello 
+costruiti su Spark che possono essere combinati senza problemi nella stessa 
+applicazione
+Spark SQL
+Per lavorare con dati strutturati. Consente di interrogare i dati tramite 
+SQL.Supporta molte fonti di dati (tabelle Hive, Parquet, JSON, ...). Estende 
+l'API Spark RDD
+MODELLI E TECNICHE PER BIG DATA
+77
+--- Page 84 ---
+Spark Streaming
+Per elaborare flussi di dati in tempo reale. Estende l'API Spark RDD
+MLlib
+Libreria di machine learning scalabile. Integra un insieme di algoritmi distribuiti 
+come classificazione, clustering, regressione, raccomandazione, estrazione 
+delle feature, ecc…
+GraphX
+API per la manipolazione di grafi e elaborazione prestazionale parallela su 
+grafi. Include anche algoritmi noti su grafi come il PageRank. Estende le Spark 
+RDD API
+Spark può sfruttare molti gestori di risorse di cluster per eseguire le sue 
+applicazioni. Modalità autonoma di Spark in questo caso utilizza un semplice 
+scheduler FIFO incluso in Spark. Può utilizzare anche Hadoop YARN, Mesos e 
+Kubernetes
+ARCHITETTURA SPARK
+Ogni applicazione è composta da un programma driver e esecutori sul cluster. Il 
+programma driver è un processo che esegue la funzione main() dell'applicazione 
+e crea l'oggetto SparkContext. Ogni applicazione ottiene i propri esecutori, che 
+sono processi che rimangono attivi per tutta la durata dell'intera applicazione ed 
+eseguono attività in più thread. Per lʼesecuzione sul cluster lo SparkContext si 
+connette a un gestore del cluster, che alloca le risorse, una volta connesso, Spark 
+acquisisce gli esecutori sui nodi del cluster e invia il codice dell'applicazione (ad 
+esempio, jar) agli esecutori. Infine, SparkContext invia le attività agli esecutori per 
+elaborare le informazioni
+Programma Driver che si interfaccia con il cluster manager
+Nodi worker dove vengono eseguiti gli esecutori
+MODELLI E TECNICHE PER BIG DATA
+78
+--- Page 85 ---
+FLUSSO DATI
+MODELLO DI PROGRAMMAZIONE
+MODELLI E TECNICHE PER BIG DATA
+79
+Si leggono i dati da input si fa un iterazione e si inserisce in memoria, poi si fa un’altra iterazione e si inserisce di nuovo in memoria e così via 
+--- Page 86 ---
+RESILIENT DISTRIBUTED DATASET (RDDs)
+Gli RDD sono l'astrazione di programmazione chiave in Spark: un'astrazione di 
+memoria distribuita. Sono una raccolta immutabile, partizionata e tollerante agli 
+MODELLI E TECNICHE PER BIG DATA
+80
+--- Page 87 ---
+errori di elementi che possono essere manipolati in parallelo.
+Come una LinkedList MyObjects> memorizzati nella memoria principale nei nodi 
+del cluster, ogni nodo del cluster utilizzato per eseguire un'applicazione contiene 
+almeno una partizione degli RDD che sono definiti nell'applicazione.
+Memorizzati nella memoria centrale degli esecutori in esecuzione nei nodi worker 
+(quando possibile) o sul disco locale del nodo (se non c'è abbastanza memoria 
+principale). Consentono di eseguire in parallelo il codice invocato su di essi.  Ogni 
+esecutore di un nodo worker esegue il codice specificato
+sulla sua partizione dell'RDD. Una partizione consiste in un  blocco atomico di dati 
+(una divisione logica dei dati) ed è lʼunità di base del parallelismo. Le partizioni di 
+un RDD possono essere memorizzate su diversi nodi del cluster.
+Immutabili una volta costruiti ciò implica che il contenuto di un RDD non può 
+essere modificato. Vengono creati  nuovi RDD basati su  RDD esistenti. Ricostruiti 
+automaticamente in caso di errore (senza replica) tracciano le informazioni della 
+gerarchia in modo da ricalcolare in modo efficiente
+i dati mancanti o persi a causa di errori del nodo. Per ogni RDD, Spark sa come è 
+stato costruito e può ricostruirlo se si verifica un errore. Queste informazioni sono 
+rappresentate tramite RDD
+lineage DAG che collega i dati di input e gli RDD.
+Spark gestisce la suddivisione di RDD in partizioni e assegna le partizioni di RDD 
+ai nodi del cluster. Spark nasconde le complessità della tolleranza agli errori infatti 
+gli RDD vengono automaticamente
+ricostruiti in caso di errore utilizzando il DAG gerarchico di RDD, che definisce il 
+piano di esecuzione
+logico.
+MODELLI E TECNICHE PER BIG DATA
+81
+--- Page 88 ---
+RDD API
+I programmi Spark sono scritti in termini di operazioni su RDD. Gli RDD vengono 
+creati da dati esterni o altri RDD  tramite trasformazioni grossolane, che 
+definiscono un nuovo set di dati basato su quelli precedenti come ad esempio 
+map, filter, join, ...; ma anche manipolati attraverso azioni (conteggio, collezione, 
+salvataggio) che avviano un lavoro da eseguire su un cluster
+MODELLO DI PROGRAMAZIONE
+Basato su operatori parallelizzabili come funzioni di alto ordine  che eseguono 
+funzioni definite dall'utente in parallelo Il flusso di dati è composto da un numero 
+qualsiasi di fonti di dati, operatori e sincronizzatori tra dati collegando i loro input e 
+output
+Il descrittore del Job è basato su un grafo aciclico diretto DAG
+FUNZIONI DI ALTO ORDINE
+MODELLI E TECNICHE PER BIG DATA
+82
+--- Page 89 ---
+Le funzioni di alto ordine sono gli operatori degli RDD. Ne esistono di due tipi, 
+trasformazioni e azioni. 
+Le trasformazioni sono operazioni lazy che creano nuovi RDD. Il nuovo RDD che 
+rappresenta il risultato di un calcolo non viene calcolato immediatamente ma viene 
+materializzato su richiesta quando viene chiamata un'azione su di esso.
+Le azioni sono operazioni che restituiscono un valore al programma driver dopo 
+aver eseguito un calcolo sul set di dati o aver scritto dati sul disco
+Le trasformazioni e le azioni disponibili in Spark
+COME CREARE UN RDD
+RDD può essere creato tramite 
+la parallelizzazione di raccolte esistenti del linguaggio di programmazione di 
+hosting (ad esempio, raccolte ed elenchi di Scala, Java, Python o R . Il 
+numero di partizioni è specificato dall'utente. Il metodo nellʼAPI RDD è 
+parallelize
+Da file (di grandi dimensioni) archiviati in HDFS o in qualsiasi altro file system. 
+Viene generata una partizione per ogni blocco HDFS. Il metodo nellʼAPI RDD è 
+textFile
+Trasformazione di un RDD esistente e Il numero di partizioni dipende dal tipo 
+di trasformazione le operazioni di trasformazione nellʼAPI RDD sono map, filter, 
+MODELLI E TECNICHE PER BIG DATA
+83
+--- Page 90 ---
+flatMap
+Trasforma una raccolta esistente in un RDD
+lines = sc.parallelize(["pandas", "i like pandas"])
+sc è la variabile dello SparkContext. Un parametro importante è il numero di 
+partizioni in cui dividere il set di dati. Spark eseguirà un'attività per ogni partizione 
+del cluster (impostazione tipica: 24 partizioni per ogni CPU nel cluster). Spark 
+tenta di impostare automaticamente il numero di partizioni ma si potrebbe 
+impostarlo manualmente  passandolo come secondo parametro per parallelizzare, 
+ad esempio, sc.parallelize(data, 10
+Carica i dati dall'archivio (file system locale, HDFS o S3
+lines = sc.textFile("/path/to/README.md")
+TRASFORMAZIONI DI UN RDD
+Map
+prende in input una funzione che viene applicata ad ogni elemento dellʼRDD. 
+Mappa ogni elemento in input in un altro oggetto 
+nums = sc.parallelize([1,2,3,4
+squares = nums.map(lambda x:x*x) #[1,4,9,16
+Filter
+genera un nuovo RDD filtrando il dataset in input utilizzando una specifica 
+funzione
+even = squares.filter(lambda num: num%2  0
+FlatMap
+prende in input una funzione che è applicata ad ogni elemento dellʼRDD; può 
+mappare ogni elemento in input con zero o più elementi
+MODELLI E TECNICHE PER BIG DATA
+84
+--- Page 91 ---
+lines = sc.parallelize(["hello world","hi"])
+words = lines.flatMap(lambda line:line.split(" "))
+Join
+effettua una join sulle chiavi di due RDDs. In output ci sono solo le chiavi 
+presenti in entrambi gli RDD. I candidati alla Join sono elaborati in maniera 
+indipendente
+users = sc.parallelize([(0,"Alex"),1,"Bert"),2,"Curt"),3,"Don")]
+hobbies = sc.paralleliza([(0,"writing"),0,"gym"),1,"swimming")])
+users.join(hobbies).collect()
+#0,Alex,writing)),(0,Alex,gym)),(1,Bert,swimming))]
+ReduceByKey
+aggrega valori con chiave uguale usando una funzione specifica. Esegue in 
+parallelo molte operazioni di riduzione, una per ogni chiave del dataset
+x = sc.parallelize([("a",1,"b",1,"a",1,"a",1,"b",1,"b",1,"b",1, 3
+y = x.reduceByKey(lambda accum, n: accum+n)  #[('b',4,'a',3
+AZIONI SU RDD
+Collect
+restituisce tutti gli elementi di un RDD sottoforma di una lista
+nums = sc.paralleliza([1,2,3,4
+nums.collect() #[1,2,3,4
+Take
+restituisce un array con i primi n elementi di un RDD
+MODELLI E TECNICHE PER BIG DATA
+85
+--- Page 92 ---
+nums.take(3)  #1,2,3
+count
+restituisce il numero di elementi dellʼRDD
+nums.count()
+Reduce
+aggrega gli elementi di un RDD usando una funzione specifica
+sum = nums.reduce(lambda x, y:x+y)
+saveAsTextFile
+scrive gli elementi di un RDD come un file di testo nel file system locale oppure 
+su HDFS
+nums.saveAsTextFile("hdfs://file.txt")
+TRANSFORMAZIONE LAZY
+Le trasformazioni sono lazy cioè non vengono calcolate finché un'azione non 
+richiede che un risultato venga restituito al programma driver. Questa 
+progettazione consente a Spark di eseguire le operazioni in modo più efficiente 
+poiché le operazioni possono essere raggruppate insieme. Ad esempio, se ci sono 
+più operazioni di filter o map, Spark può fonderle in un unico passaggio. Un altro 
+esempio se Spark sa che i dati sono partizionati, può evitare di spostarli sulla rete 
+per groupBy
+WORD COUNT IN SCALA
+MODELLI E TECNICHE PER BIG DATA
+86
+--- Page 93 ---
+Le trasformazioni e le azioni possono essere concatenate insieme. Utilizziamo 
+alcune trasformazioni per creare un set di dati di coppie String, Int) chiamate 
+conteggi e quindi salvarlo in un file
+INIZIALIZZAZIONE DI SPARK: SparkContext
+Prima parte nel programma Spark: creare l'oggetto SparkContext, che è il punto di 
+ingresso principale per le funzionalità Spark. Rappresenta la connessione al 
+cluster Spark, può essere utilizzato per creare RDD su quel cluster. Disponibile 
+anche nella shell, nella variabile chiamata sc. Può essere attivo solo uno 
+SparkContext per JVM. Utilizzare stop() sullo SparkContext attivo prima di crearne 
+MODELLI E TECNICHE PER BIG DATA
+87
+--- Page 94 ---
+uno nuovo. Oggetto SparkConf: configurazione per un'applicazione Spark 
+Utilizzato per impostare vari parametri Spark come coppie chiave-valore.
+val conf = new SparkConf().setAppName(appName).setMaster(master)
+new SparkContext(conf)
+PERSISTENZA DEGLI RDD
+Per impostazione predefinita, ogni RDD trasformato può essere ricalcolato ogni 
+volta che viene eseguita un'azione su di esso. Spark supporta anche la 
+persistenza (o memorizzazione nella cache) di
+RDD in memoria tra le operazioni per un rapido riutilizzo. Quando RDD viene reso 
+persistente, ogni nodo memorizza tutte le sue partizioni che calcola in memoria e 
+le riutilizza in altre azioni
+su quel set di dati (o set di dati derivati da esso). Ciò consente alle azioni future di 
+essere molto più veloci (anche 100 volte). Per rendere persistente RDD, utilizzare i 
+metodi 
+persist() o cache() su di esso. La cache di Spark è fault-tolerant: una partizione 
+RDD persa viene ricalcolata automaticamente utilizzando le trasformazioni che 
+l'hanno creata originariamente. Eʼ uno strumento chiave per algoritmi iterativi e un 
+rapido utilizzo interattivo
+STORAGE LEVEL
+Utilizzando persist() puoi specificare il livello di archiviazione per persistenza di un 
+RDD. Invocare cache() equivale a chiamare persist() con il livello di archiviazione 
+predefinito MEMORY_ONLY
+Livelli di archiviazione per persist():
+MEMORY_ONLY
+MEMORY_AND_ DISK
+MEMORY_ONLY_SER, MEMORY_AND_DISK_SER Java e Scala)
+DISK_ONLY,...
+Quale livello di archiviazione è il migliore? Alcune cose da considerare: cerca di 
+mantenere in memoria il più possibile, La serializzazione rende gli oggetti molto 
+MODELLI E TECNICHE PER BIG DATA
+88
+--- Page 95 ---
+più efficienti in termini di spazio, ma seleziona una libreria di serializzazione 
+veloce (ad esempio, la libreria Kryo) cerca di non salvare su disco a meno che le 
+funzioni che hanno calcolato i tuoi set di dati non siano costose (ad esempio, 
+filtrano una grande quantità di dati). Utilizza livelli di archiviazione replicati solo se 
+desideri un rapido ripristino degli errori.
+COME SPARK LAVORA A RUNTIME
+L'applicazione crea RDD, li trasforma ed esegue azioni. Ciò si traduce in un DAG di 
+operatori. Il DAG è compilato in fasi, esse sono sequenze di RDD senza shuffle 
+intermedie. Ogni fase viene eseguita come una serie di attività (una attività per 
+ogni partizione)
+Spark crea un task per ogni partizione nel nuovo RDD e lo assegna ad un nodo 
+worker. Tutto questo avviene internamente senza che il progettista si preoccupi di 
+nulla
+COMPONENTI SPARK
+RDD dataset parallelo con le partizioni
+DAG grafo logico di operazioni su RDD
+Stage: insieme di task da eseguire in parallelo
+Task: unità fondamentale dellʼesecuzione di Spark
+FAULT TOLERANCE IN SPARK
+MODELLI E TECNICHE PER BIG DATA
+89
+--- Page 96 ---
+Gli RDD tengono traccia della serie di trasformazioni utilizzate per costruirli 
+(gerarchia). Lʼinformazioni della gerarchia vengono utilizzati per calcolare i dati 
+persi. Gli RDD sono salvati come una catena di oggetti che cattura la gerarchia di 
+ogni RDD
+JOB SCHEDULING IN SPARK
+Il Job scheduling di Spark tiene conto di quali partizioni di RDD persistenti sono 
+disponibili in memoria. Quando un utente esegue un'azione su un RDD, lo 
+scheduler crea un DAG di stage dal grafo della gerarchia di RDD. Uno stage 
+contiene tante trasformazioni pipeline con dipendenze ristrette.
+MODELLI E TECNICHE PER BIG DATA
+90
+--- Page 97 ---
+Lo scheduler avvia le attività per calcolare le partizioni mancanti da ogni fase 
+finché non calcola l'RDD di destinazione. Le attività vengono assegnate alle 
+macchine in base alla località dei dati, se un'attività necessita di una partizione, 
+che è disponibile nella memoria di un nodo, l'attività viene inviata a quel nodo
+DATAFRAME E DATASET APIs
+Nelle evoluzione delle API Spark ci sono i DataFrame e Dataset. Come gli RDD, 
+DataFrame e Dataset sono raccolte di dati distribuite immutabili, Spark valuta in 
+maniera lazy sia i DataFrame che i Dataset.
+I DataFrame (da Spark 1.3 introducono il concetto di schema per descrivere i dati. 
+A differenza degli RDD, i dati sono organizzati in colonne denominate, come una 
+tabella in un database relazionale infatti funzionano solo su dati strutturati e semi-
+strutturati. Spark SQL fornisce API per eseguire query SQL su DataFrame con una 
+semplice sintassi simile a SQL. Da Spark 2.0 i DataFrame sono implementati come 
+un caso speciale di Dataset
+I Dataset (da Spark 1.6 estendono i DataFrame fornendo un'interfaccia di 
+programmazione OO sicura per i tipi quali una raccolta di dati strutturata ma 
+tipizzata, DataFrame può essere visto come una raccolta di tipo generico 
+Dataset[Row], dove Row è un oggetto JVM generico e non tipizzato e dataset, al 
+contrario, è una raccolta di oggetti JVM fortemente tipizzati
+La classe SparkSession diventa il punto di ingresso per entrambe le API
+MODELLI E TECNICHE PER BIG DATA
+91
+--- Page 98 ---
+Offrono i vantaggi degli RDD (tipizzazione forte, capacità di utilizzare funzioni 
+lambda) con quelli del motore di esecuzione ottimizzato di Spark SQL 
+(ottimizzatore Catalyst). I dataset sono disponibile in Scala e Java ma non in 
+Python ed R. Può essere costruito da oggetti JVM, essere manipolato utilizzando 
+trasformazioni funzionali (map, filter, flatMap, ...). Hanno una valutazione lazy, 
+ovvero il calcolo viene attivato solo quando viene invocata un'azione. 
+Internamente, un piano logico che descrive il calcolo richiesto per produrre dati. 
+Quando viene invocata un'azione, l'ottimizzatore di query di Spark ottimizza il 
+piano logico e genera un piano fisico per un'esecuzione efficiente in modo 
+parallelo e distribuito
+SPARK STREAMING
+Spark Streaming è unʼ estensione che consente di analizzare dati in streaming. 
+Vengono inseriti e analizzati in micro-batch Utilizza un'astrazione di alto livello 
+chiamata Dstream (discretized
+stream) che rappresenta un flusso continuo di dati che corrisponde ad una 
+sequenza di RDD
+SPARK MLlib
+Fornisce molti algoritmi ML distribuiti tra cui Classificazione (ad esempio, 
+regressione logistica), regressione, clustering (ad esempio, K-means), 
+raccomandazione, alberi decisionali, randomForest e
+altro. Fornisce anche metodi di utilità per il machine learning come trasformazioni 
+di funzionalità, valutazione del modello e ottimizzazione degli iperparametri. 
+Adotta DataFrame per supportare una
+varietà di tipi di dati
+MODELLI E TECNICHE PER BIG DATA
+92
+--- Page 99 ---
+ESEMPIO DI REGRESSIONE LOGISTICA
+TOOLS: GRAPHX
+ANALISI SU GRAFI
+Un grafo è una struttura dati composta da un insieme di vertici (noti anche come 
+nodi) collegati da archi.  I grafi sono adatti a rappresentare relazioni non lineari tra 
+oggetti, il che ha portato alla loro applicazione in diversi domini applicativi:
+Analisi dei social network
+Rappresentazione dei dati e della conoscenza
+Ottimizzazione e routing
+MODELLI E TECNICHE PER BIG DATA
+93
+--- Page 100 ---
+Sistemi di raccomandazione
+Modellazione della diffusione delle malattie
+La modellazione di queste relazioni ci consente di ottenere utili approfondimenti 
+sui modelli sottostanti, creando rappresentazioni molto più accurate dei fenomeni 
+analizzati. Diverse tipologie di dati possono essere naturalmente modellati come 
+un grafo
+Man mano che i dataset aumentano in dimensioni e complessità, gli strumenti 
+tradizionali di elaborazione dei grafi diventano inefficienti. I framework di 
+elaborazione Big Data, come Hadoop o Spark, non sono la scelta migliore quando 
+si ha a che fare con i grafi perché:
+Non considerano la struttura del grafo sottostante ai dati.
+Il calcolo può portare a un eccessivo spostamento dei dati e a un degrado 
+delle prestazioni.
+Ciò comporta la necessità di soluzioni ad hoc, appositamente progettate per un 
+calcolo efficiente di grafi paralleli. Pregel è un framework di elaborazione dei grafi 
+sviluppato da Google, progettato per elaborare in modo efficiente grafi su larga 
+scala su cluster di elaborazione distribuiti.
+È molto adatto per esprimere algoritmi altamente iterativi di grafi paralleli.
+Si basa sul modello Bulk Synchronous Parallel BSP.
+Il framework Google Pregel, progettato per supportare l'elaborazione distribuita 
+scalabile di grafi su larga scala, si basa su due modelli computazionali principali:
+BSP: i vertici eseguono calcoli locali, inviano messaggi ad altri vertici e si 
+sincronizzano tra i superstep.
+Programmazione incentrata sui vertici: i grafi vengono elaborati tramite 
+funzioni che operano su singoli vertici e sui loro archi associati.
+ Il modello BSP fornisce un framework strutturato per il calcolo parallelo, la 
+tolleranza ai guasti e la scalabilità. Il modello di programmazione incentrato sui 
+vertici semplifica lo sviluppo di algoritmi su grafi consentendo ai programmatori di 
+esprimere la logica a livello di vertice, con conseguente aumento di chiarezza ed 
+efficienza. Sebbene l'implementazione di Pregel di Google non sia disponibile al 
+MODELLI E TECNICHE PER BIG DATA
+94

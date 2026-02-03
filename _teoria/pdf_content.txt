@@ -1,0 +1,1276 @@
+
+--- Page 1 ---
+MODELLI E TECNICHE PER BIG 
+DATA
+INTRODUZIONE 
+Il mondo di oggi genera una quantità di dati senza precedenti e la capacità di 
+estrarre informazioni preziose da questi dati è fondamentale per il successo in 
+molti campi, tra cui affari, scienza e governo.
+ Il modo migliore per sfruttare il valore dell'enorme quantità di dati a disposizione è 
+implementare applicazioni di analisi e gestione dei dati scalabili per estrarre in 
+modo efficiente modelli, pattern e tendenze utili da essi.  
+La programmazione di applicazioni big data è un compito impegnativo e 
+diversificato che richiede una profonda comprensione di vari concetti tra cui 
+analisi dei dati, elaborazione distribuita, elaborazione parallela e apprendimento 
+automatico
+OBIETTIVI
+Fornire indicazioni per gli ingegneri che cercano come sviluppare applicazioni 
+big data robuste e scalabili.
+ Offrire una comprensione approfondita dei principi e delle pratiche necessarie 
+per implementare applicazioni di analisi big data efficienti.
+ Utilizzare gli strumenti big data più diffusi in applicazioni del mondo reale, 
+fornendo indicazioni su come scegliere gli strumenti giusti per ogni caso d'uso 
+specifico.
+ Trattare le ultime novità, come l'elaborazione Exascale e il machine learning 
+parallelo e distribuito, in particolare, discutere di come possono essere 
+sfruttate per analizzare ed elaborare grandi dataset
+MODELLI E TECNICHE PER BIG DATA
+1
+--- Page 2 ---
+ARGOMENTI PRINCIPALI
+  I principali sistemi di storage distribuiti, essenziali per fronteggiare lʼattuale 
+crescita esponenziale dei dati da archiviare, garantendo scalabilità, efficienza, 
+tolleranza ai guasti, disponibilità e consistenza
+ I principi fondamentali alla base dei processi della data analysis e della data 
+science, nonché il loro sviluppo su sistemi di elaborazione scalabili.
+ I vantaggi di tecnologie come l'high-perfomance computing, il cloud 
+computing e l'elaborazione distribuita, che sono utili nell'elaborazione di 
+grandi quantità di dati in contesti reali.
+ I principali modelli di programmazione per i big data, che supportano gli utenti 
+nell'espressione di algoritmi e applicazioni parallele, fornendo un'astrazione 
+per un'architettura di computer parallela.
+ Le ultime proposte nell'area dell'elaborazione Exascale, che mirano a fornire 
+soluzioni e strumenti scalabili in un'ampia gamma di campi scientifici, tra cui 
+fisica, biologia e simulazione di fenomeni naturali
+ Gli strumenti di programmazione più utilizzati per l'elaborazione di big data, 
+che gestiscono diversi tipi di dati (dai dati strutturati ai grafi, agli stream) e 
+domini (applicazioni basate su batch, streaming, grafici e query).
+ Le caratteristiche principali dei diversi framework per supportare i 
+programmatori nella scelta del framework più appropriato, insieme ad altri 
+fattori importanti che possono guidare questa scelta, come il tipo di dati, la 
+scala dell'infrastruttura, le competenze degli sviluppatori e le dimensioni della 
+comunità.
+CONCETTI FONDAMENTALI
+DEFINIZIONI
+Definizione fornita da Gartner
+“I big data sono asset informativi ad alto volume, alta velocità e/o alta varietà che 
+richiedono forme di elaborazione delle informazioni innovative ed economiche che 
+MODELLI E TECNICHE PER BIG DATA
+2
+--- Page 3 ---
+consentano una migliore comprensione, un processo decisionale e 
+un'automazione dei processiˮ
+Questa definizione è basata sulle 3V Volume, Velocità, Varietà
+Definizione fornita da Gantz and Reinsel 2011
+“Le tecnologie Big Data descrivono una nuova generazione di tecnologie e 
+architetture, progettate per estrarre valore economico da volumi molto grandi di 
+un'ampia varietà di dati, consentendo l'acquisizione, la scoperta e/o l'analisi ad 
+alta velocitàˮ
+Questa definizione è basata sulle 4V Volume, Velocità, Varietà, Valore
+Definizione di Chang and Grady 2015
+“I big data sono costituiti da set di dati estesi, principalmente nelle caratteristiche 
+di volume, varietà, velocità e/o variabilità, che richiedono un'architettura 
+scalabile per un'archiviazione, una manipolazione e un'analisi efficientiˮ
+Questa definizione è basata sulle 4V Volume, Velocità, Varietà, Variabilità
+Negli anni in molti hanno cercato di aggiungere altri aggettivi che iniziano con la V, 
+tra questi troviamo
+Viralità: capacità dei dati di trasmettere un messaggio che può raggiungere un 
+gran numero di persone
+Visualizzazione: caratteristica che permette di rappresentare graficamente i 
+dati
+Viscosità: capacità delle informazioni estratte dai dati di colpire l'interesse 
+delle persone.
+Venue Luogo): si riferisce all'origine dei dati, che possono essere raccolti da 
+più fonti distribuite ed eterogenee.
+DATA SCIENCE
+MODELLI E TECNICHE PER BIG DATA
+3
+--- Page 4 ---
+La data science è una disciplina che combina informatica, matematica applicata 
+e tecniche di analisi dei dati per fornire approfondimenti basati su grandi quantità 
+di dati. Migliora le scoperte basando le decisioni su informazioni estratte da grandi 
+set di dati tramite l'uso di algoritmi per: Collezionare, pulire, trasformare e 
+analizzare
+Step principali per il processo della data science
+ Inquadrare il problema
+ Raccogliere i dati necessari
+  Elaborare i dati per l'analisi
+ Esplorare i dati
+ Eseguire un'analisi approfondita
+  Comunicare i risultati ottenuti
+Data science Skills
+Conoscenza e studio del dominio applicativo
+Comunicazione con i proprietari/utenti dei dati
+ Prestare attenzione alla qualità dei dati
+Sapere come i dati possono essere rappresentati
+Gestire la trasformazione e l'analisi dei dati
+Conoscere la visualizzazione e la presentazione dei dati
+ Considerare le questioni etiche
+BIG DATA STORAGE
+SCALABILITAʼ VERTICALE
+Aumentare le risorse  CPU, RAM, Disk, network I/O di ogni singolo server, 
+rendendolo più veloce e più potente
+SCALABILITAʼ ORIZZONTALE
+MODELLI E TECNICHE PER BIG DATA
+4
+--- Page 5 ---
+Aggiungere più nodi di memoria o nodi di calcolo al sistema e distribuire il carico 
+di lavoro tra di essi
+DATABASE NoSQL
+Molti database relazioni sono poco flessibili alla scalabilità orizzontale su molti 
+server. Per questo esisteno quelli NoSQL che hanno come obiettivo quello di 
+garantire la scalabilità orizzontale nelle operazioni di lettura e scrittura. I database 
+NoSQL sfruttano i nuovi nodi in modo trasparente, senza richiedere la 
+distribuzione manuale delle informazioni o una gestione aggiuntiva del database. 
+Inoltre sono progettati per assicurare la distribuzione automatica dei dati e sono 
+anche tolleranti ai guasti
+I database NoSQL consentono di archiviare valori scalari (es. numeri, stringhe), 
+oggetti binari (es. immagini, video) o strutture più complesse (es. grafi).
+CATEGORIE PRINCIPALI DI DB NoSQL
+Key-Value: i database Key-Value offrono meccanismi per archiviare dati come 
+coppie ⟨chiave, valore⟩ distribuite su più server. Una Distributed Hash Table 
+DHT può essere utilizzata per implementare una struttura di indicizzazione 
+scalabile, in cui il recupero dei dati avviene utilizzando una chiave per trovare 
+un valore. Utilizzati negli e-commerce garantiscono unʼottima velocità di 
+recupero delle informazioni ma non supportano range-query. Alcuni esempi 
+reali sono: DynamoDB, Redis
+MODELLI E TECNICHE PER BIG DATA
+5
+--- Page 6 ---
+Document-based: I database basati su documenti sono progettati per gestire i 
+dati  in documenti formattati in maniera diversa (es. JSON, in cui ogni 
+documento è assegnato a una chiave unica per identificarlo e recuperarlo. 
+Estendono i Key-Value Stores, consentendo di archiviare, recuperare e gestire 
+informazioni semi-strutturate anziché singoli valori. Generalmente supportano: 
+indici secondari, tipologie multiple di documenti per database, meccanismi per 
+interrogare collezioni basandosi su vincoli multipli di valore-attributo. Un 
+esempio: MongoDB
+Column-based:  i Column-based database (detti anche Extensible Record 
+Stores) forniscono meccanismi per archiviare record estensibili che possono 
+MODELLI E TECNICHE PER BIG DATA
+6
+--- Page 7 ---
+essere partizionati su più server. I record sono detti estensibili perché è 
+possibile aggiungere nuovi attributi a ogni singolo record. I sistemi di 
+archiviazione a colonne offrono sia partizionamento orizzontale (archiviazione 
+di record su nodi diversi) e sia partizionamento verticale (archiviazione di parti 
+di un singolo record su diversi server). In alcuni sistemi, le colonne di una 
+tabella possono essere distribuite su più server utilizzando gruppi di colonne, 
+dove i gruppi predefiniti indicano quali colonne è meglio archiviare insieme. 
+Alcuni esempi: Cassandra, HBase, BigTable
+Graph-based I database basati su grafi sono sistemi ampiamente utilizzati per 
+archiviare e interrogare informazioni rappresentabili sotto forma di grafi, 
+anziché tabelle o documenti. Un grafo è rappresentato come un insieme di 
+nodi, archi e proprietà, che sono difficili da gestire utilizzando un database 
+relazionale. I database basati su grafi consentono di eseguire efficientemente 
+un'ampia gamma di query sui grafi, senza la necessità di costose operazioni di 
+join tra tabelle. Permettono di accelerare l'esecuzione di algoritmi sui grafi, 
+come lʼidentificazione di comunità, gradi, centralità, distanze, percorsi e altre 
+relazioni tra nodi. Un esempio: Neo4j
+MODELLI E TECNICHE PER BIG DATA
+7
+--- Page 8 ---
+DATABASE NoSQL REALI
+MongoDB 
+Database di tipo document-based. Progettato per supportare applicazioni internet 
+e web-based. 
+Rappresenta i documenti in un formato simile a JSON chiamato 
+BSON, che funge da formato di trasferimento per i documenti di MongoDB.  
+Comprende la struttura interna degli oggetti BSON, consentendo di accedere a 
+chiavi anche nidificate utilizzando la dot notation.  Questa funzionalità consente a 
+MongoDB di costruire indici e confrontare oggetti espressioni di query, che 
+coprono sia le chiavi BSON di livello superiore che quelle nidificate. Supporta 
+query complesse e indici completi. Eʼ progettato per partizionare i dati su più nodi 
+in maniera automatica, supporta la ridondanza ed è in grado di gestire lo storage 
+in maniera automatica
+Google Bigtable
+Database di tipo column-based. Costruito sopra il Google File System GFS, è in 
+grado di archiviare fino a petabyte di dati. Eʼ di tipo master-center. I dati sono 
+archiviati in tabelle multidimensionali sparse, distribuite e persistenti composte da 
+righe e colonne.  Ogni riga è indicizzata da una chiave di riga unica; le colonne 
+correlate sono raggruppate in famiglie di colonne. Una generica colonna è 
+identificata da una famiglia e un qualificatore che la identifica in maniera univoca 
+allʼinterno della famiglia. I dati sono ordinati per chiave di riga.  Le righe sono 
+dinamicamente partizionate in blocchi contigui chiamati tablet. I tablet sono 
+distribuiti tra diversi nodi di un cluster Bigtable (tablet servers).
+HBase
+MODELLI E TECNICHE PER BIG DATA
+8
+--- Page 9 ---
+Database di tipo column-based. Si propone come alternativa open-source al 
+database di google. Similmente ad esso, utilizza Hadoop e il Hadoop Distributed 
+File System HDFS. Sistemi scalabili linearmente con tabelle composte da righe e 
+colonne. Tabelle senza schema (solo le famiglie di colonne vengono definite al 
+momento della creazione della tabella).  Ogni tabella richiede una chiave primaria 
+obbligatoria per l'accesso.  HBase si integra con Hive, utilizzato come motore di 
+query per l'elaborazione batch di Big Data garantendo anche la tolleranza ai 
+guasti.
+Redis
+Database di tipo key-value. Redis è un popolare data store open-source in-
+memory, utilizzato come database, cache, message broker e motore di streaming. 
+Supporta operazioni atomiche come: aggiunta di una stringa, incremento di un 
+valore in un hash, inserimento di un elemento in una lista, calcolo di intersezioni, 
+unioni e differenze tra insiemi ed estrazione dell'elemento con il punteggio 
+massimo da un insieme ordinato. Anche se lavora principalmente con set di dati in 
+memoria per migliorare le prestazioni, può persistere i dati salvandoli 
+periodicamente su disco.
+DynamoDB
+Database di tipo key-value. Servizio di database NoSQL completamente gestito 
+offerto da Amazon Web Services AWS. Ideale per applicazioni che richiedono 
+accesso a bassa latenza, come giochi, applicazioni mobili e piattaforme di e-
+commerce. Tra le funzionalità built-in ci sono sicurezza integrata con crittografia 
+in transito e a riposo, controllo degli accessi granulare e integrazione con AWS 
+IAM, Backup e ripristino completamente gestiti, sincronizzazione multi-regione e 
+multi-master per alta disponibilità e durabilità dei dati. Si integra perfettamente 
+con altri servizi AWS (es. Amazon S3 per costruire architetture serverless potenti.
+Cassandra
+Database di tipo column-based. Architettura 
+masterless ad anello, in cui tutti i nodi hanno ruoli identici, consentendo a 
+qualsiasi utente autorizzato di connettersi a qualsiasi nodo in qualsiasi data center. 
+MODELLI E TECNICHE PER BIG DATA
+9
+--- Page 10 ---
+Architettura semplice e flessibile che permette di aggiungere nodi senza 
+interruzioni del servizio. Tra le caratteristiche principali troviamo la distribuzione 
+automatica dei dati sui nodi senza intervento manuale, nessun punto singolo di 
+guasto, garantendo continua disponibilità dei dati, servizio di replica 
+personalizzabile per replicare i dati tra nodi organizzati in un anello ed infine
+in caso di guasto di un nodo, una o più copie dei dati sono disponibili su altri nodi.
+Neo4j
+Database di tipo graph-based. Ogni nodo contiene un elenco di record di relazioni 
+che fanno riferimento ad altri nodi e attributi aggiuntivi (es. timestamp, metadati, 
+coppie chiave-valore). Ogni relazione deve avere: nome, direzione, nodo iniziale e 
+finale e proprietà opzionali.  I nodi e le relazioni possono avere 
+etichette per rappresentare i ruoli di un nodo (es. utente, indirizzo, azienda).  I 
+cluster Neo4j sono progettati per alta disponibilità e scalabilità orizzontale con 
+replica master-slave.
+CONFRONTO DATABASE NoSQL
+MODELLI E TECNICHE PER BIG DATA
+10
+--- Page 11 ---
+CAP THEOREM
+Teorema di GIlbert and Lynch 2002 afferma che un sistema distribuito non può 
+garantire simultaneamente le tre proprietà seguenti:
+Consistenza C  tutti i nomi vedono gli stessi dati nello stesso tempo
+Disponibilità A ogni richiesta riceve una risposta in tempi ragionevoli
+Partizione P  il sistema continua a funzionare anche se una parte di esso 
+è guasta
+Molti database NoSQL preferiscono la consistenza rispetto alla disponibilità altri 
+invece viceversa
+DATA ANALYSIS vs DATA ANALYTICS
+Le data analysis applicazioni che esplorano, interrogano, analizzano, visualizzano 
+e in generale processano set di dati su larga scala. Si riferisce al “processoˮ di 
+preparazione ed analisi dei estrarre informazioni utili.
+La data analytics è la scienza che si occupa di raccogliere ed esaminare dati 
+grezzi con l'obiettivo di trarne conclusioni significative. Include strumenti e 
+tecniche per ottenere tale scopo come per esempio strumenti di data visualization
+BIG DATA ANALYTICS
+Big data analytics si riferisce a tecniche avanzate di analisi dei dati applicate a set 
+di Big Data. Alcuni esempi sono il data mining, lʼintelligenza artificiale, il natura 
+language processing. 
+Alcuni campi applicativi dellʼanalisi dei Big Data sono: lʼanalisi dei testi, tecniche 
+per effettuare previsioni, analisi di reti (grafi), analisi prescrittiva
+I processi dei big data analytics sono intensivi dal punto di vista computazionale, 
+collaborativi e distribuiti per natura. I sistemi HPC High Performance Computing) 
+e il cloud offrono strumenti e ambienti per supportare strategie di esecuzione 
+parallela per l'analisi, l'inferenza e la scoperta nei dati distribuiti.
+La creazione di framework basati sul calcolo parallelo e sulle tecnologie cloud è 
+una condizione abilitante per lo sviluppo di compiti di analisi ad alte prestazioni e 
+tecniche di machine learning.
+MODELLI E TECNICHE PER BIG DATA
+11
+--- Page 12 ---
+PARALLEL COMPUTING
+Il calcolo parallelo può essere definito come la pratica di affrontare un problema di 
+dimensione   suddividendolo in    parti, risolte sfruttando   processori fisici 
+contemporaneamente.
+Questo paradigma di risoluzione dei problemi, noto anche come divide et impera, 
+è applicabile solo se il problema è parallelizzabile, ovvero può essere scomposto 
+in k sotto-problemi distinti.
+Concorrenza:  due o più task possono essere in progresso simultaneo
+Parallelismo: due o più task sono eseguiti contemporaneamente
+Essere "in progresso" non implica necessariamente "essere in esecuzione"; il 
+parallelismo implica concorrenza, ma non il contrario. 
+ESEMPIO DIVIDE ET IMPERA: PRODOTTO SCALARE
+Il prodotto scalare tra due vettori 
+è definito come
+il prodotto scalare può essere parallelizzato andando a scomporre il problema in K 
+somme parziali (divide step) che vengono calcolate in k processori distinti 
+simultaneamente (impera step ). Il risultato finale può essere ottenuto combinando 
+le somme parziali,dopo una fase di sincronizzazione.
+Formalmente
+NATURA PARALLELA DEI PROBLEMI
+Un problema con dominio D può essere di due tipi differenti
+MODELLI E TECNICHE PER BIG DATA
+12
+--- Page 13 ---
+Data-parallel : D è un insieme di dati e la soluzione del problema può essere 
+espressa come applicazione della funzione f  su ogni sottoinsieme di D
+Task-parallel: F è un insieme di funzioni e la soluzione al problema può essere 
+espressa come lʼapplicazione di ogni funzione  f dellʼinsieme F al dominio D
+ARCHITETTURE PARALLELE
+La tassonomia di Flynn Flynn e Rudd, 1996 classifica i diversi modelli di sistemi 
+paralleli in base alla molteplicità dei flussi di istruzioni e dati che possono gestire:
+SISD Single Instruction Stream, Single Data Stream): un flusso di istruzioni 
+che opera su un singolo flusso di dati (sistemi sequenziali).
+SIMD Single Instruction Stream, Multiple Data Stream): un flusso di 
+istruzioni che opera contemporaneamente su flussi di dati multipli.
+MISD Multiple Instruction Stream, Single Data Stream): più flussi di istruzioni 
+che operano su un singolo flusso di dati (raramente utilizzati).
+MIMD Multiple Instruction Stream, Multiple Data Stream): più flussi di 
+istruzioni che operano su flussi di dati multipli (comune nei sistemi paralleli 
+moderni).
+MODELLI E TECNICHE PER BIG DATA
+13
+--- Page 14 ---
+METRICHE DI VALUTAZIONE DELLE PERFORMANCE
+Dati 
+SPEED-UP
+Rapporto tra il tempo di esecuzione sequenziale di un programma e tempo di 
+esecuzione della versione parallela dello stesso programma
+EFFICIENZA
+Misura lʼeffettivo uso di ogni processore di un computer parallelo quando esegue 
+un programma
+LEGGE DI AMDAHL
+Dati
+Secondo la legge di Amdahl, lo speedup teorico è:
+Casi limiti
+MODELLI E TECNICHE PER BIG DATA
+14
+--- Page 15 ---
+Il massimo speed-up ottenibile per il programma che ha una frazione 
+parallelizabile F è ottenuto dalla seguente formula
+lʼinterpretazione della formula ci permette di affermare che se si aumenta il livello 
+di parallelismo, lo speed-up teorico è limitato dallʼinverso della frazione non 
+parallelizabile del programma
+CLOUD COMPUTING
+La definizone di Mell 2011 per il cloud compunting è la seguente:
+"Un modello per consentire un comodo accesso di rete su richiesta a un pool 
+condiviso di risorse informatiche configurabili (ad esempio reti, server, storage, 
+applicazioni e servizi) che possono essere rapidamente fornite e rilasciate con un 
+minimo sforzo di gestione o interazione con il fornitore di serviziˮ
+Cinque caratteristiche essenziali:
+servizio on-demand
+accesso alla rete condiviso
+risorse comuni
+MODELLI E TECNICHE PER BIG DATA
+15(condivisedagliutenti)
+--- Page 16 ---
+adattamento rapido
+servizio su misura
+MODELLI DI SERVIZIO CLOUD
+Software as a Service SaaS  software e dati sono ottenuti tramite servizi 
+internet come risorse pronte allʼuso
+Platform as a Service PaaS  ambiente che include database, applicazioni 
+server, ambienti di sviluppo per creare e testare applicazioni custom
+Infrastructure as a Service IaaS  un modello di outsourcing in base al quale 
+i clienti noleggiano risorse come CPU, dischi o risorse più complesse come 
+server virtualizzati o sistemi operativi per supportare le loro operazioni.
+MODELLI DI DISTRIBUZIONE CLOUD
+Public cloud : fornisce servizi al pubblico in generale tramite Internet e gli 
+utenti hanno poco o nessun controllo sull'infrastruttura tecnologica 
+sottostante. I venditori gestiscono i loro data center proprietari, fornendo 
+servizi costruiti su di essi
+Private cloud : fornisce servizi distribuiti su un'intranet aziendale o in un data 
+center privato. Spesso, le piccole e medie aziende IT preferiscono questo 
+modello di distribuzione in quanto offre soluzioni avanzate di sicurezza e 
+controllo dei dati che non sono disponibili nel modello di cloud pubblico
+Hybrid cloud : è la composizione di due o più cloud (privati o pubblici) che 
+rimangono entità diverse ma sono collegate tra loro.
+SERVIZI CLOUD PER I BIG DATA
+I servizi cloud per i big data sono forniti dalle più popolari piattaforme cloud come:
+Amazon Web Services
+Google Cloud Platform
+Microsoft Azure
+OpenStack
+MODELLI E TECNICHE PER BIG DATA
+16
+elasticitàadattamentoalcarico
+Riviadaltolivello
+Alivellointermediousatoda
+ing.
+inform
+L'appviene
+testatasu
+unclaudesipossonousareiservizi
+presentisulClaud
+Nvengonoutilizzatidaaziende
+--- Page 17 ---
+VERSO I CALCOLATORI EXASCALE 
+High-performance computing HPC  l'uso dell'elaborazione parallela dei dati 
+per gestire grandi quantità di dati e calcoli complessi.
+High-performance data analytics HPDA  lʼapplicazione delle soluzioni HPC 
+alla data analytics
+Exascale : è la nuova frontiera dell'HPC. Si riferisce ai sistemi di elaborazione 
+capaci di almeno un exaFLOP, il che significa che sono in grado di eseguire 
+almeno   operazioni in virgola mobile al secondo FLOPS
+Un sistema exascale può essere descritto da diversi attributi:
+Attributi fisici: sono correlati al consumo energetico totale e alle dimensioni 
+del sistema (ad esempio, area e volume).
+Velocità di calcolo: la velocità con cui un certo tipo di operazioni può essere 
+eseguito al secondo (misurata in FLOPS, istruzioni al secondo e accessi alla 
+memoria al secondo).
+Capacità di archiviazione: misura quanta memoria è disponibile in varie parti 
+della gerarchia di archiviazione (memoria principale, scratch e archiviazione 
+persistente).
+Velocità di larghezza di banda: la velocità con cui i dati rilevanti per il calcolo 
+possono essere spostati nel sistema (le metriche includono la larghezza di 
+banda della memoria locale, la larghezza di banda del checkpoint, la larghezza 
+di banda I/O e la larghezza di banda on-chip).
+MODELLI E TECNICHE PER BIG DATA
+17
+nedioperazionialsecondoeseguite
+--- Page 18 ---
+D. Talia, P. Trunfio, F. Marozzo, L. Belcastro, R. Cantini, A. OrsinoProgramming Big Data Applications –World Scientific–2024 –ISBN 978-1-80061-504-5
+Big Data Concepts
+39
+Amazon Web Services•Data transfer: data transportsolutionsdesignedto securelytransfer hugeamountsof data intothe AWS cloud.
+•Data management: a varietyof database systems, including Amazon RelationalDatabase Service (RDS) for relationaltables, and NoSQLsolutionslike Amazon DynamoDB.
+•Compute: ElasticCompute Cloud (EC2), for creatingand running virtualservers, and Amazon ElasticMapReducefor building and executingMapReduceapplications.
+•Storage: severalflexible storage options for permanentand transientdata storage.
+D. Talia, P. Trunfio, F. Marozzo, L. Belcastro, R. Cantini, A. OrsinoProgramming Big Data Applications –World Scientific–2024 –ISBN 978-1-80061-504-5
+Big Data Concepts
+40
+Google CloudPlatform•Compute:IaaS solutionssuchasGoogle Compute Engine and severalPaaS suchasGoogle App Engine, for developingand hosting web applications in Google-manageddata centers.
+•Storage: Google Cloud Storage and Datastore, SQL-like solutionssuchascloud SQL and NoSQLservicessuchasBigtable.
+•Networking: servicesfor enablingcommunication and loadbalancing acrossresources, including Google Cloud DNS, Content Delivery Network (CDN) and security servicessuchasArmor.
+--- Page 19 ---
+D. Talia, P. Trunfio, F. Marozzo, L. Belcastro, R. Cantini, A. OrsinoProgramming Big Data Applications –World Scientific–2024 –ISBN 978-1-80061-504-5
+Big Data Concepts
+41
+Microsoft Azure•Compute:the computational environment to execute cloud applications; each application is structured into roles: Web role, for Web-based applications; Worker role, for batch applications; Virtual Machines role, for virtual-machine images.
+•Storage:scalable storage to manage binary and text data (Blobs), non-relational tables (Tables), and queues for asynchronous communication between components (Queues).
+•Fabriccontroller:aimed at building a network of interconnected nodes from the physical machines of a single data center; the Compute and Storage services are built on top of this component.
+D. Talia, P. Trunfio, F. Marozzo, L. Belcastro, R. Cantini, A. OrsinoProgramming Big Data Applications –World Scientific–2024 –ISBN 978-1-80061-504-5
+Big Data Concepts
+42
+OpenStack•Compute:provides virtual servers upon demand by managing the pool of processing resources available in the datacenter; it supports different virtualization technologies such as VMware and KVM.•Storage: provides a scalable and redundant storage system; it supports Object Storage and Block Storage, that allow storing and retrieving objects and files in the datacenter.•Networking: responsible for managing the networks and IP addresses within the OpenStack environment.•SharedServices: additionalservices provided to ease the use of the datacenter, such as Identity Service for mapping users and services, Image Service for managing server images, and Database Service for relational databases.
+--- Page 20 ---
+D. Talia, P. Trunfio, F. Marozzo, L. Belcastro, R. Cantini, A. Orsino
+Programming Big Data Applications –World Scientific–2024 –ISBN 978-1-80061-504-5
+Big Data Concepts
+46
+Mainchallengesof exascalesystems
+•Energy
+•Concurrency
+•Data locality
+•Nodelocality
+•Intra-rack locality
+•Inter-rack locality
+•Memory
+•Resilience
+->localitàmigliore,gestiscotuttosuunsingolonedo
+->casopeggiore.sonocostrettoaspostareidatitradiversicomputer
+--- Page 21 ---
+Tra le sfide più importanti da affrontare in ambito exascale ci sono i problemi di 
+energia, la concorrenza, la località dei dati e la resilienza
+MACHINE LEARNING DISTRIBUITO E PARALLELO
+Spesso le tecniche di machine learning utilizzano approcci di esecuzione 
+centralizzata su un computer o in un data center sia per l'addestramento che per 
+l'esecuzione del modello. Questi approcci non sono appropriati quando i dati sono 
+molto grandi o sono ubicati in molti dispositivi di archiviazione diversi. Inoltre, 
+quando devono essere analizzate fonti di big data, i tempi di esecuzione 
+sequenziale possono essere molto lunghi, impiegando giorni o settimane per 
+essere completati. L'approccio più efficace per ridurre i tempi di esecuzione è 
+utilizzare modelli e infrastrutture di elaborazione parallela e distribuita.
+Si possono identificare tre strategie principali per lo sfruttamento del parallelismo 
+negli algoritmi di machine learning:
+Parallelismo indipendente: ogni processo accede all'intero set di dati o alla 
+propria partizione e non comunica o si sincronizza con altri processi durante 
+le operazioni di addestramento e apprendimento.
+MODELLI E TECNICHE PER BIG DATA
+18
+Prima di questa parte vedere 02B Introduzione al data mining
+--- Page 22 ---
+Parallelismo Single Program Multiple Data SPMD un set di processi che 
+eseguono lo stesso algoritmo eseguito in parallelo su diverse partizioni di un 
+set di dati; i processi SPMD cooperano scambiando risultati parziali durante la 
+loro esecuzione.
+Parallelismo dei task: ogni processo può eseguire algoritmi diversi su (una 
+diversa partizione del) set di dati; i processi possono comunicare in base a 
+diversi modi richiesti dall'algoritmo parallelo
+Nella maggior parte degli algoritmi distribuiti, lo stesso codice viene eseguito su 
+ogni nodo contemporaneamente e viene calcolato un modello locale al nodo. 
+Quindi, tutti i modelli locali vengono aggregati/combinati in un sito centrale o sono 
+condivisi in tutti i nodi per produrre il modello globale. Questo schema è comune a 
+diversi algoritmi di machine learning distribuito
+META LEARNING
+Il meta-learing mira a implementare un modello globale che analizza un set di 
+dataset distribuiti.
+I set di addestramento iniziali vengono forniti in input a N algoritmi di 
+apprendimento che vengono eseguiti su nodi diversi per creare N modelli di 
+classificazione (classificatori di base). Un set di addestramento di meta-livello 
+viene creato combinando le previsioni dei classificatori di base su un set di 
+convalida comune. Infine, un classificatore globale viene addestrato dal set di 
+addestramento di meta-livello tramite un algoritmo di meta-apprendimento.
+ENSEMBLE LEARNING
+L'ensemble learning mira a migliorare l'accuratezza del modello aggregando le 
+previsioni prodotte da un insieme di algortimi (learners).
+Due strategie principali:
+ Il bagging, chiamato anche voto per la classificazione e media per la 
+regressione, combina le classificazioni previste da un insieme di modelli o 
+dallo stesso tipo di modello per diversi set di dati di apprendimento.
+Il boosting unisce le decisioni di diversi modelli, come il bagging, ma utilizza la 
+ponderazione per dare più influenza ai modelli di maggior successo (mentre 
+nel bagging i modelli ricevono lo stesso peso).
+MODELLI E TECNICHE PER BIG DATA
+19
+--- Page 23 ---
+Il risultato è un classificatore d'insieme che mostra una maggiore accuratezza di 
+classificazione rispetto a ciascun classificatore di base utilizzato per comporlo.
+FEDERATED LEARNING
+Il federated learning è pensato per analizzare dati grezzi distribuiti senza essere 
+spostati su un singolo server o data center. Questa strategia seleziona un set di 
+nodi e invia la prima versione contenente i parametri del modello di un modello di 
+apprendimento automatico a tutti i nodi. Quindi ogni nodo esegue il modello, lo 
+addestra solo su dati locali e mantiene una versione locale del modello. Consente 
+ai dispositivi mobili di apprendere in modo collaborativo un modello di 
+apprendimento condiviso mantenendo tutti i dati di addestramento a bordo, 
+migliorando così la sicurezza e la privacy.
+COLLECTIVE DATA MINING
+Il data mining collettivo costruisce il modello globale attraverso la combinazione di 
+modelli parziali elaborati nei diversi siti, a differenza di altre tecniche che 
+combinano un set di modelli completi generati in ogni sito.  La classificazione 
+globale si basa sul fatto che qualsiasi funzione può essere
+espressa in modo distribuito utilizzando un set di funzioni di base appropriate che 
+possono contenere termini non lineari. Se le funzioni di base sono ortonormali, 
+un'analisi locale genera risultati che possono essere utilizzati efficacemente come 
+componenti del modello globale. Se un termine non lineare è presente nella 
+funzione di sommatoria, il modello globale non è completamente scomponibile tra 
+siti locali e devono essere presi in considerazione i termini incrociati che 
+coinvolgono caratteristiche da nodi diversi
+MODELLI : MAP REDUCE
+I modelli di programmazione parallela sono spesso la caratteristica principale dei 
+framework dei big data poiché influenzano il paradigma di esecuzione dei motori 
+di elaborazione  e il modo in cui gli utenti progettano e creano applicazioni.
+Consentono la separazione dei problemi di sviluppo software da quelli di 
+esecuzione parallela, fornendo astrazione e stabilità.
+MODELLI E TECNICHE PER BIG DATA
+20
+VEDERESePuòEssereSPIEGATOMEGLIO
+--- Page 24 ---
+L'astrazione è garantita perché le operazioni del modello sono a un livello 
+superiore rispetto a quelle delle architetture sottostanti.
+Semplifica la struttura del software e la difficoltà del suo sviluppo, garantendo 
+anche la stabilità tramite un'interfaccia standard.
+Pertanto, il modello può ridurre lo sforzo di implementazione, prendendo decisioni 
+una volta per ogni sistema di destinazione, anziché per ogni
+I modelli di programmazione vengono distinti in base al livello di astrazione, 
+consentendo l'espressione di meccanismi di programmazione di alto e basso 
+livello.  
+I modelli scalabili di alto livello consentono ai programmatori di specificare la 
+logica dell'applicazione nascondendo i dettagli di basso livello, affidandosi ai 
+compilatori per l'ottimizzazione.
+I modelli scalabili di basso livello consentono l'interazione diretta con le unità 
+di elaborazione e di archiviazione, consentendo una specifica precisa del 
+parallelismo delle applicazioni.
+I sistemi di programmazione sono implementazioni di uno o più modelli e 
+possono essere sviluppati attraverso diverse strategie:
+Sviluppo del linguaggio: implica la creazione di nuovi linguaggi di 
+programmazione paralleli o l'integrazione di costrutti paralleli e strutture dati in 
+linguaggi esistenti.
+Approccio di annotazione: utilizza simboli o parole chiave specifici nelle 
+annotazioni per identificare istruzioni parallele nel codice del programma e 
+indicare al compilatore quali istruzioni devono essere eseguite 
+contemporaneamente.
+Integrazione della libreria: questo approccio implica il miglioramento del 
+parallelismo includendo librerie nel codice dell'applicazione, che è l'approccio 
+più popolare poiché è ortogonale ai linguaggi host.
+I modelli di programmazione, come MapReduce e Message passing, forniscono 
+astrazione per la programmazione parallela. I sistemi di programmazione come 
+Apache Hadoop e MPI supportano questi modelli, soddisfacendo un'ampia 
+gamma di applicazioni big data e livelli di competenza
+degli utenti. Data l'ampia gamma di applicazioni big data e classi di utenti, sono 
+MODELLI E TECNICHE PER BIG DATA
+21
+--- Page 25 ---
+stati proposti diversi modelli di programmazione parallela, che abbracciano vari 
+livelli di astrazione (alto e basso)
+MAP REDUCE
+Il modello di programmazione MapReduce è stato sviluppato da Google nel 2004 
+(rivoluzionando internet con lʼalgoritmo page-rank) per affrontare la sfida di 
+elaborare efficacemente i big data. Il suo paradigma è stato ispirato dalle funzioni 
+map e reduce disponibili nei linguaggi di programmazione funzionale, come LISP, 
+e consente ai progettisti di creare applicazioni distribuite basate su queste due 
+operazioni
+Il modello MapReduce sfrutta ampiamente la strategia di dividi et impera per 
+affrontare i problemi legati ai big data
+ Dividi il problema in piccoli sotto-problemi (più semplici)
+ esegui in maniera indipendente i sotto-problemi in parallelo usando i diversi 
+nodi workers
+ combina i risultati intermedi ottenuti da ogni singolo nodo worker
+Il programmatore definisce due fasi per il processo di MapReduce: map  e reduce
+La funzione map riceve in input una coppia (key,value) e produce in output 
+una lista intermedia di coppie (key, value):
+La funzione reduce unisce tutti i valori intermedi con la stessa chiave (key)
+Il parallelismo si ottiene in entrambe le fasi:
+Nella fase di map, in cui le chiavi possono essere elaborate 
+contemporaneamente da computer diversi (le chiamate di map vengono 
+distribuite tra i computer mediante sharding dei dati di input).
+Nella fase di reduce, in cui i reducer che lavorano su chiavi distinte possono 
+essere eseguiti
+MODELLI E TECNICHE PER BIG DATA
+22
+--- Page 26 ---
+contemporaneamente. Di solito i reducer svolgono unʼattività meno onerosa 
+rispetto ai mapper
+Di conseguenza, gli algoritmi MapReduce scalano da un singolo server a centinaia 
+di migliaia di server. L'approccio MapReduce nasconde i dettagli della 
+parallelizzazione sottostante al programmatore, rendendolo semplice da usare. Gli 
+sviluppatori possono concentrarsi sulla definizione dei calcoli, senza addentrarsi 
+nei dettagli di come vengono eseguiti o di come i dati vengono inviati ai 
+processori.
+ESEMPIO: INVERTED INDEX
+Un esempio di unʼapplicazione MapReduce consiste nella generazione 
+dellʼinverted index. 
+Dato un insieme di documenti, lʼindice contiene un insieme di parole, specificando 
+lʼID di tutti i documenti che contengono quella parola
+la funzione map genera una sequenza di coppie <parola, documentoID per 
+ogni documento
+la funzione reduce prende in input tutte le coppie per una data parola, riordina 
+gli ID dei documenti corrispondenti, e  restituisce in output coppie <parola, 
+list(documentoID
+FASI DI MAP REDUCE
+Un job è un programma MapReduce che consiste nel codice per la fase di map e 
+nel codice per la fase di reduce. Comprende inoltre impostazioni di setup (per 
+MODELLI E TECNICHE PER BIG DATA
+23
+--- Page 27 ---
+esempio dove salvare i risultati), e anche il dataset in input che viene salvato in un 
+file system distribuito.
+Ogni job MapReduce è diviso in più piccole unità note come task.  I task che 
+eseguono la funzione map si chiamano mapper, mentre quelli che eseguono la 
+funzione reduce prendono il nome reducer
+Per definire applicazioni complesse che non possono essere scritte come un 
+singolo job MapReduce, gli utenti potrebbero dover comporre workflows 
+MapReduce, che implicano più cicli di operazioni di mappatura e riduzione.
+I sistemi moderni che implementano questo modello di programmazione come 
+Apache Hadoop, seguono il modello master-worker. 
+Un nodo user invia un job al nodo master che identifica nel sistema un nodo 
+worker a riposo e quindi assegna ad ogni worker un mapper o un reducer. Il nodo 
+master coordina lʼintero flusso, andando a organizzare entrambi i tipi di task. 
+Completati tutti i task il nodo master preleva il risultato e lo restituisce al nodo user
+L'elaborazione in un'applicazione MapReduce può essere descritta come segue:
+ Un descrittore di job viene inviato a un processo master, descrivendo l'attività 
+MapReduce da svolgere e altre informazioni, come la posizione dei dati di 
+input.
+ Il master avvia diversi processi di mapper e reducer su diverse macchine in 
+base al descrittore. Inoltre distribuisce i dati di input, suddivisi in più chunk, a 
+diversi mapper.
+ Ogni mapper utilizza la funzione map (definita nel descrittore di lavoro) per 
+creare una lista di coppie intermedie (chiave, valore) dopo aver ricevuto il suo 
+blocco di dati.
+ Lo stesso vale per i reducer a cui vengono assegnato a tutte le coppie con le 
+stesse chiavi, facendo in modo che ogni reducer lavori su un numero di chiavi 
+simile. Ogni reducer esegue la funzione di riduzione (specificata dal 
+descrittore di job), che unisce tutti i dati con la stessa chiave per produrre un 
+set di valori più piccolo.
+ Gli output di ogni reducer vengono quindi raccolti e inviati alla posizione 
+specificata dal descrittore di job, formando i dati di output finali
+MODELLI E TECNICHE PER BIG DATA
+24
+--- Page 28 ---
+FASE DI COMBINAZIONE
+Per aumentare la velocità, è possibile eseguire una fase di combinazione, che 
+prevede una fase di mini-riduzione sull'output della mapper locale, che aggrega i 
+dati prima di trasmetterli ai reducer tramite la rete. Un combiner viene utilizzato 
+per aggregare l'output della mappa locale:
+In molti casi, la stessa funzione può essere utilizzata sia per la combinazione che 
+per la riduzione finale, con il vantaggio di ridurre la quantità di dati intermedi e il 
+traffico di rete.
+FASE SHUFFLE E SORT
+Tra le fasi di map (con combine) e reduce, avviene un'operazione di 
+raggruppamento implicita distribuita, denominata shuffle and sort. Questa 
+operazione trasferisce l'output del mapper ai reducer, unendo e ordinando i dati in 
+base alla chiave prima di raggiungere ogni reducer.
+Le chiavi intermedie, non archiviate nel file system distribuito, vengono distribuite 
+sul disco locale di ogni computer nel cluster. Dopo che un mapper completa i suoi 
+file di output ordinati, lo scheduler MapReduce avvisa i reducer, chiedendo loro di 
+recuperare le coppie ordinate (chiave, valore) per le loro partizioni dai rispettivi 
+mapper.
+MODELLI E TECNICHE PER BIG DATA
+25
+--- Page 29 ---
+ESEMPI PRATICI DI PROBLEMI MAP 
+REDUCE
+In breve rivediamo il funzionamento dellʼalgoritmo MapReduce. 
+I Mapper prendono in input tutte le coppie chiave-valore, per generare un 
+numero arbitrario di coppie intermedie
+I Reducer invece vengono applicati a tutti i valori intermedi associati ad una 
+stessa chiave provvisoria
+Tra la fase di map e la fase di reduce è presente una barriera che include una 
+serie di operazione di ordinamento e raggruppamento
+ 
+molto spesso le chiavi in input non hanno molta rilevanza nella fase iniziale
+WORD COUNT 
+Con il word count si vuole contare il numero di occorrenze di ogni parola in una 
+grande collezione di documenti. 
+Le fasi del word count sono le seguenti:
+MODELLI E TECNICHE PER BIG DATA
+26
+--- Page 30 ---
+ Input: repository di documenti, dove ogni documento è considerato un 
+elemento
+ Map: legge il documento e restituisce una lista di coppie chiave-valore dove le 
+chiavi sono le parole e il valore è sempre pari ad 1  
+ Shuffle and Sort: raggruppa le chiavi uguali ed emette coppie nella forma 
+seguente  
+ Reduce: somma tutti i valori 1 della lista e restituisci le coppie 
+ 
+ Output: coppie del tipo   dove w è una parola che appare almeno una 
+volta in tutti i documenti in input ed m è il numero totale di occorrenze di w tra 
+tutti i documenti
+PSEUDO-CODICE DELLE FUNZIONI MAP E REDUCE
+La funzione map crea per ogni parola presente nel documento una coppia con key 
+= word e value  1
+MODELLI E TECNICHE PER BIG DATA
+27
+--- Page 31 ---
+La funzione reduce somma tutte le occorrenze di 1 per una data parola. La 
+funzione reduce non riceve in input direttamente la lista perché si lascia la libertà a 
+miglioramenti futuri, come lʼaggiunta di una combine. Nel caso in cui lʼoperazione 
+complessa gode della proprietà associativa allora il codice del metodo combine è 
+sempre uguale al codice del metodo reduce
+WORD LENGTH COUNT
+Il problema è simile al word count ma in questo caso si vuole contare quante 
+parole di una certa lunghezza sono presenti in una collezione di documenti
+ Input:  repository di documenti, dove ogni documento è considerato un 
+elemento
+ Map: legge un documento ed emette una lista di coppie chiave-valore, dove la 
+chiave è la lunghezza della parola e il valore è la parola stessa 
+ 
+ Shuffle and Sort: raggruppa in base alla chiave (lunghezza) e genera coppia 
+dalla forma seguente  
+MODELLI E TECNICHE PER BIG DATA
+28
+--- Page 32 ---
+ Reduce: conta il numero di parole per ogni lista e restituisce coppia 
+ 
+ Output: coppia del tipo   dove l è la lunghezza ed n è il numero totale di 
+parole che hanno quella lunghezza in tutti i documenti
+PSEUDO CODICE DELLA FUNZIONE MAP E DELLA FUNZIONE 
+REDUCE
+map String key, String value):
+// key = lunghezza parola
+// value = parola
+for word w in value:
+EmitIntermediate( length(w), w)
+reduce String key, Iterator values):
+int count  0
+for word w in values:
+count++
+Emit(AsString(count))
+OTTIMIZZAZIONE CON IL COMBINING
+La fase di riduzione non può iniziare prima che tutti i mapper abbiano completato il 
+loro lavoro e abbiano emesso il risultato intermedio
+Come migliorare le performance nella fase di map?
+Lʼidea è quella di eseguire una mini-reduce locale sullʼoutput di ogni mapper, 
+andando ad evitare del lavoro ai reducer. Tale operazione può essere svolta solo 
+quando la funzione di riduzione è associativa e commutativa. Questo significa 
+che i valori da combinare possono essere combinati in qualsiasi ordine ottenendo 
+lo stesso risultato
+Esempio di combine in word count  
+In molti casi la stessa funzione può essere usata sia per la fase di combining sia 
+per la fase di reduce. Tra i vantaggi si ha la diminuzione del traffico di rete, ma 
+MODELLI E TECNICHE PER BIG DATA
+29
+--- Page 33 ---
+anche la diminuzione del carico di lavoro da parte dei reducer.  Nonostante 
+lʼaggiunta della combine, la fase di shuffle and sort è necessaria.
+WORD COUNT CON LA COMBINERS
+ Input: repository di documenti, dove ogni documento è considerato un 
+elemento
+ Map: legge il documento e restituisce una lista di coppie chiave-valore dove le 
+chiavi sono le parole e il valore è sempre pari ad 1  
+ Combiner: raggruppa le chiavi, somma tutti i valori 1 ed emette 
+ 
+ Shuffle and Sort: raggruppa le chiavi uguali ed emette coppie nella forma 
+seguente  
+ Reduce: somma tutti i valori 1 della lista e restituisci le coppie 
+ 
+ Output: coppie del tipo   dove w è una parola che appare almeno una 
+volta in tutti i documenti in input ed m è il numero totale di occorrenze di w tra 
+tutti i documenti
+MODELLI E TECNICHE PER BIG DATA
+30
+--- Page 34 ---
+Per dividere le chiavi intermedie si utilizza un elemento basato su hashing detto 
+partitioner che assegna le coppie ai reducer
+Un numero limitato di problemi può essere risolto con un job MapReduce. Alcune 
+esempi sono:
+ricerca del più popolare URL in un file di log. Il primo jon calcola il numero di 
+pagine in cui è presente lʼURL, il secondo job le riordina andando ad invertire 
+key=frequenza e value=word
+I job MapReduce possono essere contatenati in un workflow dove lʼoutput di uno 
+diventa lʼinput per il prossimo job. I job scrivono e leggono i dati da un file system 
+MODELLI E TECNICHE PER BIG DATA
+31
+--- Page 35 ---
+distribuito, questo potrebbe causare un drop delle performance
+K-means CON MAP REDUCE
+Il clustering è il processo di esaminazione di una collezione di “puntiˮ per 
+raggrupparli in “clusterˮ seguendo una determinata misura di distanza. Un 
+esempio di clustering è il customer segmentetion
+DISTANZA TRA PUNTI
+Esistono diverse misure di distanza
+Distanza Euclidea:   
+dove n è il numero di variabili indipendenti nello spazio
+Distanza Manhattan :   somma dei valori 
+assoluti
+I punti più importanti sono i centroidi. Sono quei punti che hanno la posizione 
+media di tutti i punti per ogni coordinata. Possono essere punti che non fanno 
+parte del dataset iniziale. La distanza si misura tra i centroidi. Ogni centroide 
+identifica un cluster
+K-means
+K-means è lʼalgoritmo di clustering più utilizzato. Utilizza la distanza Euclidea e 
+restituisce dei valori buoni. Lʼalgortimo (di Lloyd) è il seguente
+MODELLI E TECNICHE PER BIG DATA
+32
+--- Page 36 ---
+SINGOLA ITERAZIONE MAP-REDUCE PER K-means
+Classificazione:  Assegna ogni punto del dataset al centroide del cluster più vicino
+  
+La classificazione si traduce con la Map. Dati una coppia  , per ogni 
+punto genera in parallelo tra i punti del dataset  
+Riposizione: aggiorna i centroidi dei diversi cluster calcolando la media tra i punti
+   
+questa fase si svolge nella reduce: media, in parallelo tra cluster, tra tutti i punti 
+nel cluster j
+Quella appena descritta è una sola iterazione del k-means. Per ottenere ottimi 
+risultati il k-means ha bisogno di una versione iterativa di MapReduce. Ogni 
+mapper ha bisogno di leggere un insieme di punti e tutti i centroidi (evitando 
+moltissimi mapper). Ogni nuova iterazione bisogna condividere in broadcast la 
+posizione dei nuovi centroidi e ripetere unʼaltra iterazione di MapReduce fino alla 
+convergenza
+MODELLI E TECNICHE PER BIG DATA
+33
+--- Page 37 ---
+MODELLI: WORKFLOWS
+Un workflow identifica una serie di attività, eventi o task che devono essere 
+completati in ordine per raggiungere un obiettivo o ottenere dei risultati
+Il Workflow Management Coalition WMC definisce i workflow come 
+“l'automazione di un processo aziendale, in tutto o in parte, durante il quale 
+documenti, informazioni o attività vengono passati da un partecipante all'altro per 
+azione, secondo un insieme di regole proceduraliˮ
+I workflows sono diventati un buon modello di programmazione che permettono a 
+scienziati e ingegneri di creare programmi complessi per l'elaborazione di 
+repository di big data su piattaforme di elaborazione distribuita, combinando 
+analisi dei dati, calcolo scientifico e metodi di simulazione complessi.
+Un processo rappresenta un insieme di attività che sono connesse tra di loro 
+con lʼobiettivo di produrre un prodotto, calcolare un risultato, fornire un 
+servizio
+Un task (attività) è una parte di lavoro che rappresenta uno step logico 
+dellʼintero processo
+I workflows, come modello di programmazione, rappresentano pattern ben definiti 
+e (possibilmente) ripetibili o raggruppamenti sistematici di attività mirati a 
+raggiungere una certa trasformazione dei dati. 
+I workflow adottano un approccio dichiarativo per esprimere la logica ad alto 
+livello di molte applicazioni, nascondendo dettagli di basso livello non essenziali 
+alla progettazione. Un vantaggio significativo dei workflow è la possibilità di 
+essere salvati e riutilizzati, facilitando modifiche e nuove esecuzioni. Questo 
+consente agli utenti di progettare e riutilizzare schemi comuni in più contesti.
+Un Workflow Management System WMS facilita la definizione, lo sviluppo e 
+l'esecuzione dei processi, coordinando le attività e svolgendo un ruolo chiave 
+durante l'esecuzione del workflow.
+Un workflow è strutturato come un grafo composto da un insieme finito di nodi  e 
+archi :
+Vertici: rappresentano compiti, attività o fasi specifiche del processo.
+MODELLI E TECNICHE PER BIG DATA
+34
+--- Page 38 ---
+Archi: rappresentano il flusso o la sequenza di esecuzione dei compiti, 
+indicando l'ordine in cui devono essere eseguiti.
+I workflow possono essere implementati come programmi software utilizzando 
+linguaggi di programmazione, librerie o sistemi che permettono di esprimere le 
+fasi fondamentali del workflow. Inoltre, questi strumenti forniscono meccanismi 
+per orchestrare l'esecuzione dei workflow.
+WORKFLOW PATTERN
+I compiti di un workflow possono essere combinati in modi diversi per soddisfare 
+le esigenze di varie applicazioni, sfruttando schemi ricorrenti e riutilizzabili 
+(sequenziali e paralleli).
+I principali pattern dei workflow sono:
+ Sequenza
+ Diramazione Branching)
+ Sincronizzazione
+ Ripetizione
+SEQUENZA
+Il pattern di sequenza indica una serie di compiti che devono essere completati in 
+un ordine specifico. Questi compiti sono connessi da archi direzionati, che 
+definiscono il flusso di controllo e stabiliscono l'ordine sequenziale di esecuzione.
+DIRAMAZIONE
+La diramazione descrive situazioni in cui il workflow si divide in due o più percorsi 
+distinti in base a certe condizioni (es. esiti di compiti precedenti, valori di dati, 
+input utente o altri criteri rilevanti). Questo pattern consente al workflow di 
+adattarsi dinamicamente a diversi scenari applicativi.
+MODELLI E TECNICHE PER BIG DATA
+35
+--- Page 39 ---
+Esistono tre tipi di diramazioni:
+ AND-split: il ramo si divide in flussi di esecuzione concorrenti.
+ XOR-split: il flusso è diretto solo verso uno dei rami successivi, scelto sulla 
+base di condizioni.
+ OR-split: il flusso si divide in uno o più rami successivi in base a condizioni 
+specifiche.
+SINCRONIZZAZIONE
+Il pattern di sincronizzazione descrive situazioni in cui più flussi di controllo 
+provenienti da rami diversi devono essere uniti in un unico flusso. Questi scenari 
+sono comuni nei workflow reali, dove l'esecuzione di un compito specifico deve 
+attendere il completamento di uno o più compiti precedenti.
+Esistono tre varianti della sincronizzazione
+ AND-join: tutti i rami devono completarsi prima di procedere al compito 
+successivo.
+ XOR-join: solo uno dei rami deve completarsi prima di procedere.
+ OR-join: almeno uno dei rami deve completarsi prima di trasferire il controllo al 
+compito successivo.
+RIPETIZIONE
+I pattern di ripetizione definiscono diversi modi di specificare la ripetizione di 
+compiti:
+ Ciclo arbitrario: uno o più compiti vengono ripetuti senza una struttura rigida 
+(simile all'uso di "goto").
+ Ciclo strutturato:
+While-do: il ciclo si ripete finché una condizione è soddisfatta.
+Repeat-until: il ciclo si ripete fino a quando una condizione è soddisfatta.
+ Ricorsione: un compito si ripete attraverso l'auto-invocazione.
+DIRECTED ACYCLIC GRAPHS
+MODELLI E TECNICHE PER BIG DATA
+36
+--- Page 40 ---
+Un DAG Directed Acyclic Graph) è un workflow che presenta le seguenti 
+caratteristiche:
+Diretto: ogni compito ha almeno un predecessore o un successore (o 
+entrambi).
+Aciclico: non possono esistere cicli, per evitare loop infiniti.
+I DAG sono il modello di programmazione più usato nella gestione dei workflow e 
+sono ampiamente adottati in framework per big data, come Apache Spark.
+Modellano processi complessi di analisi dei dati, come il data mining. Sono utili 
+per applicazioni in cui input, output e compiti dipendono da altre operazioni.
+I DAGs possono avere due tipi di dipendenze:
+Dipendenze sui dati: l'output di un compito serve come input per il 
+successivo.
+Dipendenze sul controllo: un compito deve essere completato prima di 
+avviare un altro.
+I task dei DAG e le loro dipendenze possono essere definite in maniera:
+ Esplicita: definite direttamente nel workflow (es. T2 dipende da T1.
+ Implicita: derivate automaticamente dal sistema analizzando le relazioni tra 
+input e output.
+Il modello DAG è una generalizzazione di MapReduce, poiché permette più fasi di 
+mappa e riduzione, risultando in un grafo di operazioni. Offre maggiore flessibilità 
+rispetto a MapReduce e consente una migliore ottimizzazione globale, 
+permettendo la riorganizzazione e combinazione delle operazioni.
+DIRECTED CYCLIC GRAPHS
+MODELLI E TECNICHE PER BIG DATA
+37
+--- Page 41 ---
+I grafi ciclici diretti rappresentano modelli di workflow più complessi, dove i cicli 
+indicano loop o meccanismi di iterazione.
+In questo caso, il workflow spesso descrive una rete di compiti, dove:
+I nodi rappresentano servizi, componenti software o oggetti di controllo.
+Gli archi rappresentano messaggi, flussi di dati o canali di comunicazione tra i 
+servizi.
+MODELLI: MESSAGE PASSING
+Il modello di passaggio di messaggi è un paradigma per la comunicazione tra 
+processi IPC nell'informatica distribuita, in cui ogni elemento di elaborazione ha 
+una memoria privata. I meccanismi di IPC, forniti dal sistema operativo, includono 
+la memoria condivisa e la memoria distribuita o il passaggio di messaggi. I modelli 
+di programmazione parallela sono generalmente classificati in base all'uso della 
+memoria.
+MEMORIA CONDIVISA vs MODELLO MESSAGE 
+PASSING
+Nel modello a memoria condivisa, più processi accedono a uno spazio di 
+indirizzamento comune. Questi processi possono comunicare condividendo 
+direttamente variabili, con una comunicazione generalmente più veloce, ma che 
+richiede meccanismi di sincronizzazione.
+Nel modello a passaggio di messaggi, un'applicazione opera come un insieme di 
+processi indipendenti, ciascuno con una memoria locale, comunicando con altri 
+attraverso lo scambio di messaggi. I processi mittente e destinatario devono 
+trasferire i dati dalla memoria locale di uno a quella dell'altro. Questo modello può 
+essere più flessibile nei sistemi distribuiti, ma può comportare un maggiore 
+overhead di comunicazione.
+La distinzione principale sta nel modo in cui i processi interagiscono e 
+condividono i dati:
+La memoria condivisa si basa su uno spazio di indirizzamento comune.
+MODELLI E TECNICHE PER BIG DATA
+38
+--- Page 42 ---
+Il passaggio di messaggi si basa sulla comunicazione tramite scambio 
+esplicito di messaggi.
+PRIMITIVE 
+Il modello di passaggio di messaggi è basato su due primitive principali:
+Send(destinazione, messaggio): un processo invia un messaggio a un altro 
+processo identificato come destinazione.
+Receive(sorgente, messaggio): un processo riceve un messaggio da un altro 
+processo identificato come sorgente.
+Il processo mittente crea un messaggio contenente i dati da condividere (stringa 
+di byte) con il processo destinatario e lo trasmette in rete eseguendo 
+un'operazione di send. Il processo destinatario deve essere consapevole di 
+attendere i dati ed eseguire un'operazione di receive per indicare la sua 
+disponibilità a ricevere il messaggio.
+DIVERSE PRATICHE DI IMPLEMENTAZIONE
+L'implementazione pratica delle operazioni di invio e ricezione determina diverse 
+tipologie di passaggio di messaggi, che possono essere classificate come:
+Diretto o indiretto
+Con buffer o senza buffer
+Bloccante o non bloccante
+MODELLI E TECNICHE PER BIG DATA
+39
+--- Page 43 ---
+M.P. DIRETTO O INDIRETTO
+Nel passaggio di messaggi diretto, esiste un collegamento diretto tra due processi 
+per lo scambio di dati, in cui l'identità del destinatario è nota e i messaggi vengono 
+inviati direttamente.  Questo approccio manca di modularità, poiché cambiare 
+l'identità di un processo richiede l'aggiornamento di tutti i mittenti e destinatari 
+collegati.
+Nel passaggio di messaggi indiretto, vengono utilizzate mailbox o porte per la 
+consegna dei messaggi, che possono essere associate a un processo ricevente. A 
+differenza del passaggio diretto, la stessa porta può essere riassegnata a un altro 
+processo in seguito. In questo approccio, il mittente non è a conoscenza di quale 
+processo riceverà il messaggio. Inoltre, più processi possono inviare messaggi 
+alla stessa porta, consentendo collegamenti multi-processo e maggiore 
+flessibilità.
+M.P. BLOCCANTE E NON-BLOCCANTE
+Esiste una distinzione significativa tra il passaggio di messaggi bloccante 
+(sincrono) e non bloccante (asincrono). 
+Nell'invio bloccante, il mittente deve attendere l'accettazione del messaggio da 
+parte del destinatario. Nella ricezione bloccante, il destinatario attende l'arrivo di 
+un messaggio prima di continuare l'elaborazione. Le operazioni bloccanti sono 
+spesso chiamate sincrone perché sia il mittente che il destinatario sono 
+sincronizzati durante la comunicazione.
+In un invio non bloccante, il mittente continua le sue operazioni senza attendere 
+l'accettazione del messaggio. Tuttavia, il mittente può attendere una conferma in 
+caso di errore di trasmissione. In una ricezione non bloccante, il destinatario può 
+MODELLI E TECNICHE PER BIG DATA
+40
+--- Page 44 ---
+ricevere un messaggio valido o nullo, con la sfida di determinare quando un 
+messaggio è effettivamente arrivato. Se la trasmissione continua a fallire, il 
+destinatario potrebbe attendere indefinitamente.
+Le tre combinazioni fondamentali più utilizzate sono:
+Invio bloccante e ricezione bloccante: chiamato comunicazione "rendez-
+vous".
+Invio non bloccante e ricezione non bloccante.
+Invio non bloccante e ricezione bloccante: la combinazione più comune.
+BUFFERING
+Un modo per distinguere i modelli di passaggio di messaggi è considerare la 
+dimensione della coda del ricevitore. Esistono tre alternative:
+Coda a capacità zero (senza coda): richiede un "rendez-vous", poiché il 
+mittente deve attendere che il destinatario sia pronto a ricevere il messaggio.
+Coda limitata: la coda è limitata a un numero n di messaggi o byte, quindi il 
+mittente viene bloccato quando la coda è piena.
+Coda illimitata: il mittente può procedere senza attese, ma ciò può comportare 
+rischi dovuti alle risorse fisiche limitate.
+COMUNICAZIONE DI GRUPPO
+Nelle applicazioni distribuite parallele, un sistema di passaggio di messaggi può 
+necessitare di primitive di comunicazione di gruppo per migliorare le prestazioni e 
+semplificare lo sviluppo.
+COMUNICAZIONE UNO A MOLTI
+In questa comunicazione, un singolo mittente trasmette un messaggio a più 
+destinatari, nota anche come comunicazione multicast. I processi destinatari 
+stabiliscono un gruppo, che può essere chiuso o aperto. Nel gruppo chiuso, solo i 
+membri possono inviare messaggi internamente. Nel gruppo aperto, qualsiasi 
+processo del sistema può inviare messaggi all'intero gruppo.
+Un caso particolare della comunicazione uno-a-molti è la comunicazione 
+broadcast, in cui un messaggio viene inviato a tutti i processori collegati a una 
+MODELLI E TECNICHE PER BIG DATA
+41
+--- Page 45 ---
+rete.
+COMUNICAZIONE MOLTI A UNO
+In questa comunicazione, più mittenti trasmettono messaggi a un singolo 
+destinatario.
+Il destinatario può essere, Selettivo, identificando un mittente specifico per lo 
+scambio di messaggi. Non selettivo, rispondendo a qualsiasi mittente da un 
+insieme predefinito.
+Il non-determinismo rappresenta una sfida significativa, poiché non è certo quale 
+dei membri del gruppo avrà il proprio messaggio elaborato per primo.
+COMUNICAZIONE MOLTI A MOLTI
+In questa comunicazione, più mittenti possono trasmettere messaggi a più 
+destinatari. Questo schema è flessibile e consente interazioni complesse nei 
+sistemi distribuiti. È particolarmente utile in scenari che richiedono una 
+comunicazione decentralizzata tra più entità. La consegna ordinata dei messaggi 
+è fondamentale per garantire che tutti i destinatari ricevano i messaggi in un 
+ordine accettabile per le applicazioni coinvolte.
+MODELLI: BSP
+Il Bulk Synchronous Parallel BSP è un modello di calcolo parallelo sviluppato da 
+Leslie Valiant nel 1990. Valiant ha proposto un paradigma simile al modello di Von 
+Neumann, connettendo hardware e software per macchine parallele. Lʼapproccio 
+BSP consente ai programmatori di evitare la gestione costosa della memoria e 
+della comunicazione, ottenendo un calcolo parallelo efficiente con un basso grado 
+di sincronizzazione.
+Un computer BSP è costituito dai seguenti componenti:
+Un insieme di Elementi di Elaborazione Processing Elements, PEs) o 
+processori, che eseguono calcoli locali.
+Un Router, che gestisce la consegna dei messaggi tra coppie di PEs.
+Un sincronizzatore hardware, che permette ai PEs di sincronizzarsi a intervalli 
+regolari di L unità di tempo (latenza di comunicazione o periodicità di 
+sincronizzazione).
+MODELLI E TECNICHE PER BIG DATA
+42
+--- Page 46 ---
+Una computazione nel modello BSP è costituita da una serie di superstep, in cui a 
+ciascun processore viene assegnato un compito che comprende, passaggi di 
+calcolo locale, trasmissione di messaggi e ricezione di messaggi
+Ogni L unità di tempo (il parametro periodicità) si verifica un controllo globale per 
+verificare che tutti i processori abbiano completato il superstep prima di 
+procedere a quello successivo
+Ogni superstep è composto da tre fasi ordinate:
+ Computazione concorrente: ogni processore esegue calcoli in modo 
+asincrono utilizzando solo i dati locali, ossia quelli presenti nella memoria del 
+processore stesso.
+ Comunicazione globale: i processi si scambiano dati in base alle richieste 
+effettuate durante il calcolo locale.
+ Sincronizzazione a barriera: i processi che raggiungono una barriera devono 
+attendere che tutti gli altri abbiano raggiunto la stessa barriera.
+Comunicazione e sincronizzazione sono separate, garantendo indipendenza tra i 
+processi in un superstep ed evitando problemi legati alla comunicazione sincrona, 
+come deadlock.
+MODELLI E TECNICHE PER BIG DATA
+43
+--- Page 47 ---
+COMUNICAZIONE
+Il modello BSP semplifica la gestione della comunicazione trattandola come 
+un'operazione collettiva e imponendo un limite di tempo per la trasmissione di dati 
+in batch. Tutte le operazioni di comunicazione di un superstep sono considerate 
+un'unica unità, con lʼassunzione che i messaggi abbiano una dimensione costante 
+allʼinterno di tale unità.
+Sia:
+h il numero massimo di messaggi in un superstep
+g il rapporto di throughput della comunicazione
+Il tempo necessario affinché un processore invii h messaggi di dimensione 
+unitaria è hg.
+Un messaggio di lunghezza m è trattato come m messaggi di lunghezza unitaria, 
+con un costo di comunicazione pari a mg.
+SINCRONIZZAZIONE
+Nonostante i costi potenziali, il modello BSP dipende dalla sincronizzazione con 
+barriere, evitando il rischio di dipendenze circolari, deadlock o livelock. I costi di 
+sincronizzazione dipendono da fattori quali, variazioni nei tempi di completamento 
+dei calcoli locali, lo sforzo necessario per mantenere la coerenza globale tra i 
+processori.
+MODELLI E TECNICHE PER BIG DATA
+44
+--- Page 48 ---
+Per affrontare queste sfide si possono adottare strategie come:
+Assegnazione di compiti proporzionale al carico di lavoro dei processi.
+Ottimizzazione dellʼefficienza della rete di comunicazione.
+Utilizzo di hardware specializzato per la sincronizzazione.
+Metodi di gestione degli interrupt.
+COSTO DELLʼALGORITMO BSP
+Per garantire la trasmissione di almeno h messaggi in un superstep, deve valere la 
+relazione L  hg dove L è la periodicità e hg rappresenta il tempo necessario 
+affinché un processore invii h messaggi di dimensione unitaria.
+Mantenere un valore basso di g è essenziale per evitare un aumento significativo 
+del tempo di comunicazione.
+Il costo totale di un superstep s è dato da   dove   è il costo 
+computazionale totale del superstep.
+Dato S il numero totali di superstep, il costo totale dellʼalgoritmo BSP è dato da:
+dove W è il costo totale della computazione e H è il costo totale della 
+comunicazione
+BSP BASATO SU MEMORIA CONDIVISA
+Il modello BSP non supporta direttamente la memoria condivisa, il broadcasting o 
+lʼaggregazione. Tuttavia, queste funzionalità possono essere emulate utilizzando 
+una Parallel Random Access Machine PRAM su un computer BSP.
+In un sistema PRAM esiste un numero infinito di processori connessi a una 
+memoria condivisa di capacità illimitata. La comunicazione tra processori avviene 
+esclusivamente attraverso la memoria condivisa e i calcoli sono completamente 
+sincroni.
+MODELLI E TECNICHE PER BIG DATA
+45
+--- Page 49 ---
+Il Bulk-Synchronous PPRAM BSPRAM è stato introdotto da Alexandre Tiskin nel 
+1998 per facilitare la programmazione in stile memoria condivisa. Il BSPRAM è 
+costituito da p processori con memoria locale veloce, unʼunica memoria 
+principale condivisa. Esegue computazioni in superstep, come il modello BSP ms 
+ogni superstep include tre fasi, input, computazione locale e output, durante il 
+quale i processori interagiscono con la memoria principale.
+La sincronizzazione avviene tra i superstep, mentre il calcolo allʼinterno di un 
+superstep è asincrono.
+MODELLI : SQL-like E PGAS
+MODELLO SQL-like
+Uno dei problemi principali dei tradizionali database relazionali è la loro incapacità 
+di scalare orizzontalmente su più computer, limitandone lʼefficacia quando si tratta 
+di gestire enormi volumi di dati. 
+MODELLI E TECNICHE PER BIG DATA
+46
+--- Page 50 ---
+Per superare questo limite, è emerso lʼapproccio NoSQL, che offre unʼalternativa 
+non relazionale e consente la scalabilità orizzontale per le operazioni di lettura e 
+scrittura del DB su più server.
+Mentre i database relazionali si basano sul modello ACID Atomicità, Coerenza, 
+Isolamento, Durabilità), i database NoSQL aderiscono al modello BASE Basic 
+Availability, Soft-state, Eventual Consistency). 
+Quest'ultimo elimina il vincolo della consistenza immediata dopo ogni transazione, 
+favorendo invece lʼelaborazione parallela su più server, anche se ciò può 
+comportare una consistenza solo eventuale dei dati.
+Sebbene i database NoSQL siano ottimi per la scalabilità, spesso risultano inadatti 
+per l'analisi dei dati, che è invece un punto di forza delle soluzioni SQL-like. 
+Queste combinano l'efficienza del modello MapReduce con la semplicità di un 
+linguaggio simile a SQL.
+MapReduce è utile per la scalabilità e riduce i tempi di interrogazione, ma è 
+complesso per utenti meno esperti.
+I sistemi SQL-like semplificano le operazioni comuni come aggregazioni, selezioni 
+e conteggi, mantenendo al contempo velocità e scalabilità.
+Spesso questi sistemi ottimizzano automaticamente le query utilizzando 
+MapReduce dietro le quinte.
+Uno degli strumenti più noti per abilitare query SQL-like su big data è Apache 
+Hive, che migliora le capacità di interrogazione dei sistemi basati su MapReduce. 
+Hive consente lo sviluppo di applicazioni di analisi dati utilizzando un linguaggio 
+simile a SQL, facilitando il lavoro degli sviluppatori.
+MODELLI E TECNICHE PER BIG DATA
+47
+--- Page 51 ---
+PERCHEʼ USARE SQL CON I BIG DATA?
+SQL è ampiamente utilizzato da sviluppatori, amministratori di database e data 
+scientist grazie ai suoi numerosi vantaggi:
+Linguaggio dichiarativo, che permette di descrivere trasformazioni di dati 
+senza dover specificare il flusso di controllo.
+Interoperabilità, poiché SQL è standardizzato e diverse piattaforme possono 
+implementarlo con sintassi compressibile da parte degli utilizzatori garantendo 
+compatibilità.
+Approccio data-driven, ideale per applicazioni che richiedono elaborazioni 
+complesse su dataset di grandi dimensioni. Le operazioni SQL riflettono 
+trasformazioni e modifiche dei set di dati di input, rendendolo un modello di 
+programmazione conveniente per applicazioni incentrate sui dati in ambienti 
+tradizionali e big data
+Un altro aspetto fondamentale nellʼuso di SQL per i big data è la tecnica della 
+query-in-place, che consente di eseguire query direttamente sui dati senza 
+bisogno di spostarli in un database analitico separato.  La tecnica query-in-place 
+offre un cambio di paradigma nell'analisi dei big data, fornendo un mezzo potente, 
+efficiente e conveniente per estrarre intuizioni fruibili direttamente da enormi set di 
+dati. Questo approccio:
+Evita la duplicazione e il trasferimento di dati, riducendo la complessità e i 
+costi operativi.
+Garantisce un accesso rapido ai dati, migliorando la latenza per interrogazioni 
+SQL ad hoc su dataset di grandi dimensioni, offrendo disponibilità immediata 
+dei dati e riducendo i costi operativi.
+PARTIZIONAMENTO DEI DATI PER LE QUERY
+Il partizionamento dei dati è cruciale per ottimizzare le query su big data. Il 
+partizionamento divide una tabella in più porzioni basate su specifici valori di 
+colonna, creando file o directory separate.
+Riduce il numero di dati letti inutilmente, abbassando i costi di I/O. Migliora la 
+velocità di esecuzione delle query. Tuttavia, un eccesso di partizioni può 
+sovraccaricare il nodo master, che deve mantenere in memoria tutti i metadati.
+MODELLI E TECNICHE PER BIG DATA
+48
+--- Page 52 ---
+MODELLO PGAS
+Il PGAS è un paradigma di programmazione parallela pensato per massimizzare la 
+produttività dei programmatori mantenendo alte prestazioni. L'idea centrale è 
+quella di sfruttare un indirizzamento globale dello spazio di memoria, che offre 
+un compromesso tra la semplicità di programmazione e lʼefficienza nellʼaccesso ai 
+dati, implementando anche una separazione tra accessi ai dati locali e remoti.  
+Questa separazione nell'accesso ai dati è fondamentale per ottenere 
+miglioramenti delle prestazioni e garantire la scalabilità su architetture parallele su 
+larga scala
+Nel modello PGAS, il programma è eseguito da più processi concorrenti, ognuno 
+operante su nodi diversi. Ogni processo ha un rank, che corrisponde allʼindice del 
+nodo su cui è in esecuzione. I processi accedono a una memoria globale 
+condivisa, che è suddivisa in spazi locali e remoti. Gli indirizzi locali sono 
+accessibili direttamente, mentre per accedere a indirizzi remoti servono chiamate 
+API specifiche.
+Un thread o un processo può ottenere un puntatore a dati che si trovano ovunque 
+nel sistema e può leggere o scrivere dati remoti locali ad altri thread. I linguaggi 
+PGAS distinguono tra memoria condivisa (accessibile a tutti i thread) e memoria 
+privata (accessibile solo al thread proprietario). Ogni thread ha la sua porzione di 
+spazio privato e una sezione di spazio condiviso.
+Il modello PGAS supporta tre approcci principali per l'esecuzione parallela:
+MODELLI E TECNICHE PER BIG DATA
+49
