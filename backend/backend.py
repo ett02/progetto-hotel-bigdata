@@ -444,60 +444,109 @@ class GestoreBigData:
         """
         Query 4: 'Asimmetria Emotiva' (Emotional Asymmetry).
         Analizza se la delusione genera più testo della soddisfazione.
-        
-        Logica:
-        1. Suddivide le recensioni in 'Bucket' di voto (es. <5, 5-7, 7-9, >9).
-        2. Calcola la lunghezza media delle parole positive vs negative.
-        3. Calcola il 'Negativity Ratio' (quanto è più lunga la parte negativa).
+
+        Output per bucket di score:
+        - lunghezze medie (neg/pos)
+        - differenza (neg - pos)
+        - negativity_ratio (solo se avg_positive_length è sufficientemente > 0)
+        - % recensioni con testo negativo/positivo presente
         """
-        from pyspark.sql.functions import avg, when, col, lit
-        
-        # 1. Creazione Bucket di Punteggio
-        # Usiamo Reviewer_Score per creare fasce di soddisfazione
-        df_bucket = df_hotel.withColumn("score_bucket",
-            when(col("Reviewer_Score") < 5.0, "😠 < 5.0 (Arrabbiato)")
-            .when((col("Reviewer_Score") >= 5.0) & (col("Reviewer_Score") < 7.5), "😐 5.0-7.5 (Deluso)")
-            .when((col("Reviewer_Score") >= 7.5) & (col("Reviewer_Score") < 9.0), "🙂 7.5-9.0 (Soddisfatto)")
-            .otherwise("😍 > 9.0 (Felice)")
+        from pyspark.sql.functions import avg, when, col, lit, count, round
+
+        df_bucket = (
+            df_hotel
+            .withColumn(
+                "bucket_id",
+                when(col("Reviewer_Score") < 5.0, lit(0))
+                .when((col("Reviewer_Score") >= 5.0) & (col("Reviewer_Score") < 7.5), lit(1))
+                .when((col("Reviewer_Score") >= 7.5) & (col("Reviewer_Score") < 9.0), lit(2))
+                .otherwise(lit(3))
+            )
+            .withColumn(
+                "score_bucket",
+                when(col("Reviewer_Score") < 5.0, "😠 < 5.0 (Arrabbiato)")
+                .when((col("Reviewer_Score") >= 5.0) & (col("Reviewer_Score") < 7.5), "😐 5.0-7.5 (Deluso)")
+                .when((col("Reviewer_Score") >= 7.5) & (col("Reviewer_Score") < 9.0), "🙂 7.5-9.0 (Soddisfatto)")
+                .otherwise("😍 > 9.0 (Felice)")
+            )
         )
-        
-        # 2. Aggregazione per Bucket
-        # Calcoliamo la lunghezza MEDIA delle parti positive e negative
-        # Usiamo le colonne pre-calcolate nel dataset: Review_Total_Negative_Word_Counts, Review_Total_Positive_Word_Counts
-        result = df_bucket.groupBy("score_bucket") \
+
+        agg = (
+            df_bucket.groupBy("bucket_id", "score_bucket")
             .agg(
                 avg("Review_Total_Negative_Word_Counts").alias("avg_negative_length"),
-                avg("Review_Total_Positive_Word_Counts").alias("avg_positive_length")
-            ) \
-            .withColumn("negativity_ratio", col("avg_negative_length") / (col("avg_positive_length") + 0.001)) \
-            .orderBy("score_bucket")
-            
+                avg("Review_Total_Positive_Word_Counts").alias("avg_positive_length"),
+
+                # % review con testo presente (proxy: word_count > 0)
+                (count(when(col("Review_Total_Negative_Word_Counts") > 0, 1)) / count("*") * 100).alias("pct_has_negative"),
+                (count(when(col("Review_Total_Positive_Word_Counts") > 0, 1)) / count("*") * 100).alias("pct_has_positive"),
+
+                count("*").alias("num_reviews")
+            )
+        )
+
+        # Differenza (molto interpretabile)
+        agg = agg.withColumn(
+            "delta_len_neg_minus_pos",
+            col("avg_negative_length") - col("avg_positive_length")
+        )
+
+        # Ratio solo se il denominatore è “abbastanza grande” (evita artefatti)
+        agg = agg.withColumn(
+            "negativity_ratio",
+            when(col("avg_positive_length") >= 3.0, col("avg_negative_length") / col("avg_positive_length"))
+            .otherwise(lit(None))
+        )
+
+        # Arrotondamenti per UI
+        result = (
+            agg.withColumn("avg_negative_length", round(col("avg_negative_length"), 2))
+            .withColumn("avg_positive_length", round(col("avg_positive_length"), 2))
+            .withColumn("delta_len_neg_minus_pos", round(col("delta_len_neg_minus_pos"), 2))
+            .withColumn("negativity_ratio", round(col("negativity_ratio"), 3))
+            .withColumn("pct_has_negative", round(col("pct_has_negative"), 2))
+            .withColumn("pct_has_positive", round(col("pct_has_positive"), 2))
+            .orderBy("bucket_id")
+            .drop("bucket_id")
+        )
+
         return result
 
     def query_affidabilita_voto(self, df_hotel):
         """
         Query 5: 'Affidabilità del Voto' (Data Consistency).
         Misura la deviazione standard dei voti per capire se il punteggio medio è rappresentativo.
-        
-        Logica:
-        - Hotel con alta deviazione standard (>2.5) sono "Love or Hate" (polarizzanti).
-        - Hotel con bassa deviazione standard (<1.5) sono "Coerenti" (what you see is what you get).
+
+        Nota:
+        - Evito first(Average_Score) perché non deterministico.
         """
-        from pyspark.sql.functions import stddev, avg, count, first, col
-        
-        # 1. Raggruppa per Hotel_Name
-        # 2. Calcola media effettiva, deviazione standard e conteggio
-        # Nota: Usiamo first("Average_Score") perché è costante per ogni hotel nel dataset
-        result = df_hotel.groupBy("Hotel_Name") \
+        from pyspark.sql.functions import stddev, avg, count, col, round
+
+        result = (
+            df_hotel.groupBy("Hotel_Name")
             .agg(
-                first("Average_Score").alias("Average_Score"),          # Voto ufficiale dataset
-                avg("Reviewer_Score").alias("mean_reviewer_score"),     # Media reale calcolata
-                stddev("Reviewer_Score").alias("stddev_reviewer_score"),# Deviazione Standard (quanto oscillano i voti)
-                count("Reviewer_Score").alias("num_reviews")            # Numero totale recensioni
-            ) \
-            .filter(col("num_reviews") >= 100) \
-            .orderBy(col("stddev_reviewer_score").desc())           # Ordina per i più "incerti/polarizzanti"
-            
+                avg("Average_Score").alias("avg_hotel_score"),                 # aspettativa "ufficiale" (robusta)
+                avg("Reviewer_Score").alias("mean_reviewer_score"),            # media reale
+                stddev("Reviewer_Score").alias("stddev_reviewer_score"),       # dispersione (campionaria)
+                count("*").alias("num_reviews")
+            )
+            .filter(col("num_reviews") >= 100)
+        )
+
+        # CV = std/mean (utile per confrontare hotel con medie diverse)
+        result = result.withColumn(
+            "cv_score",
+            round(col("stddev_reviewer_score") / col("mean_reviewer_score"), 4)
+        )
+
+        # pulizia output
+        result = (
+            result.withColumn("avg_hotel_score", round(col("avg_hotel_score"), 2))
+                .withColumn("mean_reviewer_score", round(col("mean_reviewer_score"), 2))
+                .withColumn("stddev_reviewer_score", round(col("stddev_reviewer_score"), 2))
+                .orderBy(col("stddev_reviewer_score").desc())
+        )
+
         return result
 
     def query_hotel_rischiosi(self, df_hotel):
@@ -509,69 +558,107 @@ class GestoreBigData:
         - Calcola la % di recensioni <= 4.0 per ogni hotel.
         - Filtra quelli con media >= 8.0 ma % disastri > 5%.
         """
-        from pyspark.sql.functions import avg, count, when, col, first, round
-        
-        # 1. Calcoliamo per ogni hotel: media reale, conteggio totale, conteggio disastri
-        result = df_hotel.groupBy("Hotel_Name") \
+        from pyspark.sql.functions import (
+            avg, count, when, col, round, log1p, percentile_approx
+        )
+
+        # 1) Aggregazione per hotel
+        result = (
+            df_hotel.groupBy("Hotel_Name")
             .agg(
-                first("Average_Score").alias("Average_Score"),
-                avg("Reviewer_Score").alias("mean_reviewer_score"),
+                avg("Average_Score").alias("avg_hotel_score"),            # aspettativa (stabile e deterministica)
+                avg("Reviewer_Score").alias("mean_reviewer_score"),      # realtà media
                 count("*").alias("total_reviews"),
-                count(when(col("Reviewer_Score") <= 4.0, 1)).alias("disaster_count")
+                count(when(col("Reviewer_Score") <= 4.0, 1)).alias("disaster_count"),
+                percentile_approx("Reviewer_Score", 0.05).alias("p05_score")  # coda bassa (robusta)
             )
-            
-        # 2. Calcoliamo la percentuale di disastri
-        result = result.withColumn("disaster_pct", round((col("disaster_count") / col("total_reviews")) * 100, 2))
-        
-        # 3. Filtriamo:
-        # - Almeno 50 recensioni (per significatività)
-        # - Media alta (>= 8.0) -> Sembrano ottimi hotel
-        # - Percentuale disastri significativa (>= 5%) -> Rischio nascosto
-        result = result.filter(
-            (col("total_reviews") >= 50) & 
-            (col("mean_reviewer_score") >= 8.0) & 
-            (col("disaster_pct") >= 5.0)
-        ).orderBy(col("disaster_pct").desc())
-        
+        )
+
+        # 2) Percentuale disastri
+        result = result.withColumn(
+            "disaster_pct",
+            round((col("disaster_count") / col("total_reviews")) * 100, 2)
+        )
+
+        # 3) Indice rischio (ranking più solido)
+        result = result.withColumn(
+            "risk_index",
+            round(col("disaster_pct") * log1p(col("total_reviews")), 2)
+        )
+
+        # 4) Filtri: significatività + “apparenza ottima” + rischio
+        result = (
+            result.filter(
+                (col("total_reviews") >= 50) &
+                (col("avg_hotel_score") >= 8.0) &        # hotel che “sembrano ottimi”
+                (col("disaster_pct") >= 5.0)
+            )
+            .orderBy(col("risk_index").desc(), col("disaster_pct").desc())
+        )
+
         return result
 
     def query_expectation_gap(self, df_hotel):
         """
         Query 7: 'Expectation Gap' Analysis.
         Analizza la differenza tra Aspettativa (Average_Score) e Realtà (Reviewer_Score).
-        
+
         Logica:
         1. Calcola il Gap = Reviewer_Score - Average_Score per ogni recensione.
         2. Divide in bucket di 'Prestigio' (basato su Average_Score).
         3. Misura quanto spesso le aspettative vengono deluse (Gap < 0) e con che intensità.
         """
-        from pyspark.sql.functions import avg, col, when, abs, count, round
 
-        # 1. Calcolo del Gap (Realtà - Aspettativa)
-        # Gap Negativo = Delusione (es. Voto 6, Media 9 => Gap -3)
+        from pyspark.sql.functions import (
+            avg, col, when, count, round, lit, coalesce
+        )
+
+        # 1) Calcolo del Gap (Realtà - Aspettativa)
         df_gap = df_hotel.withColumn("gap", col("Reviewer_Score") - col("Average_Score"))
-        
-        # 2. Bucket di Prestigio (Expectation Level)
-        df_gap = df_gap.withColumn("expectation_bucket",
+
+        # 2) Bucket di Prestigio + bucket_id numerico per ordinamento logico
+        df_gap = df_gap.withColumn(
+            "bucket_id",
+            when(col("Average_Score") < 7.5, lit(0))
+            .when((col("Average_Score") >= 7.5) & (col("Average_Score") < 8.5), lit(1))
+            .when((col("Average_Score") >= 8.5) & (col("Average_Score") < 9.2), lit(2))
+            .otherwise(lit(3))
+        ).withColumn(
+            "expectation_bucket",
             when(col("Average_Score") < 7.5, "🥉 Economico (< 7.5)")
             .when((col("Average_Score") >= 7.5) & (col("Average_Score") < 8.5), "🥈 Standard (7.5-8.5)")
             .when((col("Average_Score") >= 8.5) & (col("Average_Score") < 9.2), "🥇 Premium (8.5-9.2)")
             .otherwise("💎 Luxury (> 9.2)")
         )
-        
-        # 3. Aggregazione per Bucket
-        result = df_gap.groupBy("expectation_bucket") \
+
+        # 3) Aggregazione per Bucket
+        result = (
+            df_gap.groupBy("bucket_id", "expectation_bucket")
             .agg(
-                avg("gap").alias("avg_gap"), # Gap medio (solitamente vicino a 0)
-                
+                avg("gap").alias("avg_gap"),
+
                 # Percentuale di Gap Negativi (Delusioni)
                 (count(when(col("gap") < 0, 1)) / count("*") * 100).alias("pct_delusioni"),
-                
+
                 # Intensità media della delusione (solo sui gap negativi)
                 avg(when(col("gap") < 0, col("gap"))).alias("intensita_delusione_media"),
-                 
-                count("*").alias("num_reviews")
-            ) \
-            .orderBy("expectation_bucket")
-            
+
+                count("*").alias("num_reviews"),
+            )
+            .orderBy("bucket_id")
+            .drop("bucket_id")
+        )
+
+        # 4) Pulizia output per visualizzazione (Streamlit-friendly)
+        #    - round per leggibilità
+        #    - coalesce per evitare null (caso: nessun gap negativo nel bucket)
+        result = (
+            result.withColumn("avg_gap", round(col("avg_gap"), 3))
+                  .withColumn("pct_delusioni", round(col("pct_delusioni"), 2))
+                  .withColumn(
+                  "intensita_delusione_media",
+                  round(coalesce(col("intensita_delusione_media"), lit(0.0)), 3)
+              )
+        )
         return result
+

@@ -121,3 +121,13 @@ Analisi mirate per rispondere a domande di business precise.
   - Filtra hotel con **Media > 8.0** (apparentemente eccellenti).
   - Ma con **> 5% di recensioni disastrose** (voto <= 4.0).
 - **Output:** Lista di "Trappole potenziali": hotel con media alta ma probabilità elevata di pessima esperienza.
+
+### 🤯 G. Expectation Gap (Realtà vs Aspettativa)
+- **Domanda:** *Quanto fa male cadere dall'alto? (Aspettative deluse)*
+- **Logica:**
+  - Calcola il **Gap** = `Reviewer_Score` - `Average_Score` per ogni recensione.
+  - Suddivide gli hotel in fasce di prestigio (Economico, Standard, Premium, Luxury).
+  - Misura l'**Intensità della Delusione** (media dei Gap negativi).
+- **Output:**
+  - Visualizza se gli hotel di lusso vengono puniti più severamente quando sbagliano (**Paradosso del Lusso**).
+  - Grafico che mostra quanto è "profondo" il disappunto per ogni fascia.

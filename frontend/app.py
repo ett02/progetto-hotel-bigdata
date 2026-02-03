@@ -776,188 +776,472 @@ elif page == "🧠 Insight Avanzati":
         
         # ========= QUERY 4: ASIMMETRIA EMOTIVA (Lunghezza) =========
         elif query_type == "📏 Lunghezza Recensioni":
-            st.subheader("📏 Asimmetria Emotiva: La Delusione genera più testo?")
+            st.subheader("📏 Asimmetria Emotiva: la delusione genera più testo?")
             st.markdown("""
-            **Obiettivo**: Analizzare il comportamento emotivo degli utenti.
-            **Ipotesi**: Quando siamo delusi (voto basso), tendiamo a scrivere molto di più rispetto a quando siamo felici.
+            **Obiettivo**: misurare l’asimmetria emotiva in modo quantitativo.  
+            Usiamo le word-count già presenti nel dataset (parte positiva vs negativa).  
+            - **Delta** = (negativo − positivo) ⇒ quanto “sfogo” in più c’è nella parte negativa  
+            - **Negativity ratio** = negativo / positivo ⇒ metrica relativa (solo se il positivo non è troppo piccolo)  
+            - **% presenza testo** ⇒ quanto spesso le persone scrivono davvero una parte positiva/negativa
             """)
-            
+
+            with st.expander("⚙️ Impostazioni", expanded=False):
+                show_table = st.checkbox("Mostra tabella completa", value=True)
+
             if st.button("🚀 Analizza Comportamento Emotivo", type="primary"):
                 with st.spinner("Calcolando asimmetria emotiva..."):
                     df_emo = gestore.query_lunghezza_recensioni(st.session_state.df_hotel).toPandas()
-                    
-                    if len(df_emo) > 0:
-                        st.markdown("### 📊 Risultati per Fascia di Voto")
-                        
-                        # Mostra 4 metriche chiave (una per bucket)
-                        cols = st.columns(4)
-                        for idx, row in df_emo.iterrows():
-                            with cols[idx % 4]:
-                                ratio = row['negativity_ratio']
-                                color = "normal"
-                                if ratio > 1.5: color = "inverse" # Molto negativo
-                                
-                                st.metric(
-                                    label=row['score_bucket'],
-                                    value=f"{ratio:.2f}x",
-                                    delta="Ratio Negativo/Positivo" if idx==0 else None,
-                                    help=f"Neg: {row['avg_negative_length']:.0f} parole | Pos: {row['avg_positive_length']:.0f} parole"
-                                )
-                        
-                        st.divider()
-                        
-                        # Grafico Comparativo
-                        st.markdown("### 📉 Parole Positive vs Negative")
-                        st.caption("Confronto lunghezza media delle descrizioni positive (Verde) e negative (Rosso) per ogni fascia di voto.")
-                        
-                        # Prepariamo dati per il grafico
-                        chart_data = df_emo.melt(
-                            id_vars=["score_bucket"], 
-                            value_vars=["avg_positive_length", "avg_negative_length"],
-                            var_name="Tipo", 
-                            value_name="Lunghezza Media (Parole)"
-                        )
-                        
-                        st.bar_chart(
-                            data=chart_data,
-                            x="score_bucket",
-                            y="Lunghezza Media (Parole)",
-                            color="Tipo",
-                            stack=False,
-                            height=400
-                        )
-                        
-                        # Insight Finale
-                        worst_bucket = df_emo.iloc[0] # Solitamente < 5.0
-                        best_bucket = df_emo.iloc[-1] # Solitamente > 9.0
-                        
-                        ratio_diff = worst_bucket['negativity_ratio']
-                        
-                        if ratio_diff > 1.2:
-                            st.error(f"⚠️ **Effetto Sfogo Confermato**: I clienti arrabbiati scrivono **{ratio_diff:.1f} volte** di più nella parte negativa rispetto a quella positiva!")
-                        else:
-                            st.info("ℹ️ Comportamento bilanciato: Non c'è una forte asimmetria nella lunghezza delle recensioni.")
 
+                if df_emo is None or len(df_emo) == 0:
+                    st.warning("Nessun dato trovato.")
+                else:
+                    # --- Ordine logico bucket (non fidarti dell’ordine arrivato) ---
+                    ORDER = [
+                        "😠 < 5.0 (Arrabbiato)",
+                        "😐 5.0-7.5 (Deluso)",
+                        "🙂 7.5-9.0 (Soddisfatto)",
+                        "😍 > 9.0 (Felice)"
+                    ]
+                    df_emo["score_bucket"] = df_emo["score_bucket"].astype(str)
+                    df_emo["bucket_order"] = df_emo["score_bucket"].apply(lambda x: ORDER.index(x) if x in ORDER else 999)
+                    df_emo = df_emo.sort_values("bucket_order").drop(columns=["bucket_order"])
+
+                    # --- Compatibilità: se il backend non ha le nuove colonne, creale ---
+                    if "delta_len_neg_minus_pos" not in df_emo.columns:
+                        df_emo["delta_len_neg_minus_pos"] = df_emo["avg_negative_length"] - df_emo["avg_positive_length"]
+                    if "pct_has_negative" not in df_emo.columns:
+                        df_emo["pct_has_negative"] = None
+                    if "pct_has_positive" not in df_emo.columns:
+                        df_emo["pct_has_positive"] = None
+
+                    st.markdown("### 📊 Risultati per fascia di voto")
+
+                    cols = st.columns(min(4, len(df_emo)))
+                    for i, row in enumerate(df_emo.itertuples(index=False)):
+                        bucket = getattr(row, "score_bucket")
+                        neg_len = float(getattr(row, "avg_negative_length"))
+                        pos_len = float(getattr(row, "avg_positive_length"))
+                        delta = float(getattr(row, "delta_len_neg_minus_pos"))
+
+                        ratio = getattr(row, "negativity_ratio", None)
+                        ratio_str = "n/a" if ratio is None else f"{float(ratio):.2f}x"
+
+                        with cols[i % len(cols)]:
+                            # metrica principale: delta (più interpretabile)
+                            st.metric(
+                                label=bucket,
+                                value=f"{delta:.1f}",
+                                delta="Δ (neg - pos) parole",
+                                delta_color="inverse" if delta > 0 else "normal",
+                                help=f"Neg: {neg_len:.0f} parole | Pos: {pos_len:.0f} parole | Ratio: {ratio_str}"
+                            )
+
+                            # secondaria: ratio (se disponibile)
+                            st.caption(f"Ratio (neg/pos): **{ratio_str}**")
+
+                            # presenza testo (se disponibile)
+                            pn = getattr(row, "pct_has_negative", None)
+                            pp = getattr(row, "pct_has_positive", None)
+                            if pn is not None and pp is not None:
+                                st.caption(f"Testo Neg presente: **{float(pn):.1f}%** | Pos presente: **{float(pp):.1f}%**")
+
+                    st.divider()
+
+                    # --- Grafico serio con Altair (affidabile) ---
+                    st.markdown("### 📉 Positive vs Negative: lunghezza media per fascia")
+                    st.caption("Confronto tra lunghezza media della parte positiva e negativa (parole).")
+
+                    import altair as alt
+                    import pandas as pd
+
+                    chart_data = pd.melt(
+                        df_emo,
+                        id_vars=["score_bucket"],
+                        value_vars=["avg_positive_length", "avg_negative_length"],
+                        var_name="Tipo",
+                        value_name="Lunghezza_media"
+                    )
+                    chart_data["Tipo"] = chart_data["Tipo"].replace({
+                        "avg_positive_length": "Positivo",
+                        "avg_negative_length": "Negativo"
+                    })
+
+                    chart = (
+                        alt.Chart(chart_data)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("score_bucket:N", sort=ORDER, title="Fascia voto"),
+                            y=alt.Y("Lunghezza_media:Q", title="Lunghezza media (parole)"),
+                            color=alt.Color("Tipo:N", title="Tipo"),
+                            xOffset="Tipo:N",
+                            tooltip=[
+                                alt.Tooltip("score_bucket:N", title="Fascia"),
+                                alt.Tooltip("Tipo:N", title="Tipo"),
+                                alt.Tooltip("Lunghezza_media:Q", title="Parole medie", format=".1f")
+                            ]
+                        )
+                        .properties(height=380)
+                    )
+
+                    st.altair_chart(chart, use_container_width=True)
+
+                    st.divider()
+
+                    # --- Insight robusto (senza iloc[0]/[-1]) ---
+                    st.markdown("### 🧠 Insight automatico")
+
+                    # Fascia con delta più alto = più sfogo negativo rispetto al positivo
+                    idx_max = df_emo["delta_len_neg_minus_pos"].astype(float).idxmax()
+                    idx_min = df_emo["delta_len_neg_minus_pos"].astype(float).idxmin()
+
+                    max_row = df_emo.loc[idx_max]
+                    min_row = df_emo.loc[idx_min]
+
+                    if float(max_row["delta_len_neg_minus_pos"]) > 10:
+                        st.warning(
+                            f"⚠️ **Effetto sfogo**: nella fascia **{max_row['score_bucket']}** "
+                            f"la parte negativa è mediamente più lunga di **{max_row['delta_len_neg_minus_pos']:.1f} parole** "
+                            f"rispetto alla positiva."
+                        )
                     else:
-                        st.warning("Nessun dato trovato.")
+                        st.info("ℹ️ Nessuna asimmetria forte: le lunghezze positive/negative sono relativamente bilanciate.")
+
+                    st.caption(
+                        f"Fascia più 'negativity-heavy': {max_row['score_bucket']} | "
+                        f"fascia più 'positivity-heavy': {min_row['score_bucket']}"
+                    )
+
+                    if show_table:
+                        st.markdown("### 📋 Tabella completa")
+                        st.dataframe(df_emo, use_container_width=True, height=420)
+
 
         # ========= QUERY 5: AFFIDABILITÀ VOTO =========
         elif "Affidabilità Voto" in query_type:
             st.subheader("📉 Affidabilità del Voto (Coerenza)")
             st.markdown("""
-            **Obiettivo**: Misurare se il punteggio medio di un hotel è "affidabile" o se nasconde opinioni molto discordanti.
-            **Metrica**: Usiamo la **Deviazione Standard** (σ). 
-            - **Alta σ (>2.5)**: Hotel "Love or Hate". I clienti o lo amano o lo odiano. Rischioso.
-            - **Bassa σ (<1.5)**: Hotel "Coerente". Sai cosa aspettarti.
+            **Obiettivo**: stimare quanto il punteggio medio di un hotel sia “affidabile” misurando la dispersione dei voti.  
+            **Metrica**: **deviazione standard (σ)** dei `Reviewer_Score`.
+            - **σ alta** ⇒ hotel polarizzante (esperienze molto diverse)
+            - **σ bassa** ⇒ hotel consistente (esperienza prevedibile)
             """)
-            
+
+            with st.expander("⚙️ Impostazioni", expanded=False):
+                min_reviews = st.number_input("Min recensioni per hotel", 0, 1000000, 100, step=50)
+                top_k = st.slider("Top hotel da mostrare", 3, 50, 10)
+
             if st.button("🚀 Analizza Affidabilità", type="primary"):
                 with st.spinner("Calcolando dispersione voti..."):
                     df_std = gestore.query_affidabilita_voto(st.session_state.df_hotel).toPandas()
-                    
-                    if len(df_std) > 0:
-                        # Top 3 Più Controversi
-                        st.markdown("### 🔥 Top 3 Hotel più Controversi")
-                        cols = st.columns(3)
-                        for i in range(min(3, len(df_std))):
-                            row = df_std.iloc[i]
+
+                if df_std is None or len(df_std) == 0:
+                    st.warning("Nessun dato sufficiente per l'analisi.")
+                else:
+                    # Compatibilità colonne (backend vecchio/nuovo)
+                    if "avg_hotel_score" not in df_std.columns and "Average_Score" in df_std.columns:
+                        df_std["avg_hotel_score"] = df_std["Average_Score"]
+
+                    # Filtro UI
+                    if "num_reviews" in df_std.columns:
+                        df_std = df_std[df_std["num_reviews"] >= min_reviews].copy()
+
+                    if len(df_std) == 0:
+                        st.warning("Dopo il filtro, non restano hotel con abbastanza recensioni.")
+                    else:
+                        # Ordina per più controversi
+                        df_std = df_std.sort_values("stddev_reviewer_score", ascending=False)
+
+                        st.markdown("### 🔥 Hotel più controversi (σ alta)")
+                        top = df_std.head(max(3, min(top_k, len(df_std))))
+
+                        cols = st.columns(min(3, len(top)))
+                        for i in range(min(3, len(top))):
+                            row = top.iloc[i]
                             with cols[i]:
                                 st.error(f"**{row['Hotel_Name']}**")
-                                st.metric("Dispersione (σ)", f"{row['stddev_reviewer_score']:.2f}", delta="Molto Polarizzante", delta_color="inverse")
-                                st.caption(f"Voto Medio: {row['mean_reviewer_score']:.2f} | Recensioni: {row['num_reviews']}")
-                        
+                                st.metric("Dispersione (σ)", f"{row['stddev_reviewer_score']:.2f}",
+                                        delta="Polarizzante", delta_color="inverse")
+                                st.caption(
+                                    f"Media reviewer: {row['mean_reviewer_score']:.2f} | "
+                                    f"Media hotel: {row['avg_hotel_score']:.2f} | "
+                                    f"Recensioni: {int(row['num_reviews'])}"
+                                )
+
                         st.divider()
 
-                        # Tabella Dati
-                        st.markdown("### 📋 Dettaglio Completo")
-                        st.dataframe(
-                            df_std.style.format({
-                                "Average_Score": "{:.1f}",
-                                "mean_reviewer_score": "{:.2f}",
-                                "stddev_reviewer_score": "{:.2f}",
-                                "num_reviews": "{:.0f}"
-                            }),
-                            use_container_width=True,
-                            height=400
+                        st.markdown("### 📈 Mappa: Qualità vs Affidabilità")
+                        st.caption("X = media voti, Y = deviazione standard. Dimensione = numero recensioni. Tooltip con dettagli.")
+
+                        import altair as alt
+
+                        chart = (
+                            alt.Chart(df_std)
+                            .mark_circle(opacity=0.85)
+                            .encode(
+                                x=alt.X("mean_reviewer_score:Q", title="Media Reviewer Score"),
+                                y=alt.Y("stddev_reviewer_score:Q", title="Deviazione standard σ"),
+                                size=alt.Size("num_reviews:Q", title="# recensioni", scale=alt.Scale(zero=False)),
+                                color=alt.Color("stddev_reviewer_score:Q", title="σ (dispersione)"),
+                                tooltip=[
+                                    alt.Tooltip("Hotel_Name:N", title="Hotel"),
+                                    alt.Tooltip("avg_hotel_score:Q", title="Media hotel", format=".2f"),
+                                    alt.Tooltip("mean_reviewer_score:Q", title="Media reviewer", format=".2f"),
+                                    alt.Tooltip("stddev_reviewer_score:Q", title="σ", format=".2f"),
+                                    alt.Tooltip("num_reviews:Q", title="# recensioni"),
+                                ],
+                            )
+                            .properties(height=480)
                         )
-                        
-                        # Grafico Scatter: Voto Medio vs Deviazione Standard
-                        st.markdown("### 📈 Mappa Rischio: Qualità vs Affidabilità")
-                        st.caption("Ogni punto è un hotel. In alto a destra: Hotel con voti alti ma incerti.")
-                        
-                        st.scatter_chart(
-                            data=df_std,
-                            x='mean_reviewer_score',
-                            y='stddev_reviewer_score',
-                            color='num_reviews',
-                            size='num_reviews',
-                            height=500
+                        st.altair_chart(chart, use_container_width=True)
+
+                        st.info(
+                            "💡 **Lettura**: punti più in alto ⇒ maggiore disaccordo tra clienti (hotel imprevedibile). "
+                            "Punti a destra e in basso ⇒ qualità alta e consistente."
                         )
-                        
-                        st.info("""
-                        💡 **Insight Lettura Grafico**: Esiste una **Curva dell'Incertezza**.
-                        - ↘️ **In basso a destra**: Hotel Eccellenti (>9.0) hanno bassa deviazione. **Tutti d'accordo: è top.**
-                        - ↖️ **In alto a sinistra**: Hotel Mediocri (<7.5) hanno alta deviazione. **Caos di opinioni: rischioso.**
-                        """)
-                        
-                    else:
-                        st.warning("Nessun dato sufficiente per l'analisi (minimo 100 recensioni per hotel).")
+
+                        st.markdown("### 📋 Dettaglio completo")
+                        # Evito .style: più stabile
+                        st.dataframe(df_std.head(top_k), use_container_width=True, height=420)
+
 
         # ========= QUERY 6: HOTEL RISCHIOSI =========
         elif "Hotel Rischiosi" in query_type:
             st.subheader("⚠️ Hotel 'Rischiosi' (Alta Media, Alto Rischio)")
             st.markdown("""
-            **Obiettivo**: Individuare hotel che sembrano eccellenti (media > 8.0) ma nascondono una quota preoccupante di disastri (voti <= 4.0).
-            **Perché è utile?**: Spesso la media inganna. Un hotel con media 8.5 può avere il 10% di recensioni terribili (es. cimici, furti, rumore insupportabile) che la media nasconde.
+            **Obiettivo**: individuare hotel che sembrano eccellenti (media alta) ma nascondono una quota preoccupante di disastri (voti ≤ 4.0).  
+            **Perché è utile?**: la media può “nascondere” una coda di esperienze pessime (es. pulizia, rumore, sicurezza, staff).
             """)
-            
+
+            with st.expander("⚙️ Impostazioni", expanded=False):
+                min_reviews_ui = st.number_input("Min recensioni per hotel", 0, 1000000, 50, step=10)
+                min_avg_ui = st.slider("Soglia media (apparenza ottima)", 0.0, 10.0, 8.0, 0.1)
+                min_disaster_pct_ui = st.slider("Soglia % disastri (≤ 4.0)", 0.0, 50.0, 5.0, 0.5)
+                show_table_ui = st.checkbox("Mostra tabella completa", value=True)
+
             if st.button("🚀 Scansiona Rischi Nascosti", type="primary"):
                 with st.spinner("Cercando hotel rischiosi..."):
                     df_risky = gestore.query_hotel_rischiosi(st.session_state.df_hotel).toPandas()
-                    
-                    if len(df_risky) > 0:
-                        st.error(f"⚠️ Trovati **{len(df_risky)}** hotel formalmente eccellenti ma con rischio elevato!")
-                        
-                        # Top 3 Rischi
-                        st.markdown("### 🔥 Top 3 'Trappole' Potenziali")
-                        cols = st.columns(3)
-                        for i in range(min(3, len(df_risky))):
+
+                if df_risky is None or len(df_risky) == 0:
+                    st.success("✅ Nessun hotel rischioso trovato con i criteri attuali.")
+                else:
+                    # ---- Normalizzazione nomi colonne (compatibilità backend vecchio/nuovo) ----
+                    # Backend nuovo: avg_hotel_score, risk_index, p05_score
+                    # Backend vecchio: Average_Score
+                    if "avg_hotel_score" not in df_risky.columns and "Average_Score" in df_risky.columns:
+                        df_risky["avg_hotel_score"] = df_risky["Average_Score"]
+
+                    if "risk_index" not in df_risky.columns:
+                        # fallback: ranking = disaster_pct
+                        df_risky["risk_index"] = df_risky["disaster_pct"]
+
+                    if "p05_score" not in df_risky.columns:
+                        df_risky["p05_score"] = None  # opzionale
+
+                    # ---- Filtri UI (nel caso backend abbia soglie diverse) ----
+                    df_risky = df_risky[
+                        (df_risky["total_reviews"] >= min_reviews_ui) &
+                        (df_risky["avg_hotel_score"] >= min_avg_ui) &
+                        (df_risky["disaster_pct"] >= min_disaster_pct_ui)
+                    ].copy()
+
+                    if len(df_risky) == 0:
+                        st.success("✅ Nessun hotel rischioso trovato con i criteri attuali.")
+                    else:
+                        # Ordina per rischio
+                        df_risky = df_risky.sort_values(["risk_index", "disaster_pct"], ascending=[False, False])
+
+                        st.error(f"⚠️ Trovati **{len(df_risky)}** hotel 'ottimi' ma con rischio elevato!")
+
+                        # ---- Top 3 ----
+                        st.markdown("### 🔥 Top 3 potenziali 'trappole'")
+                        cols = st.columns(min(3, len(df_risky)))
+                        top_n = min(3, len(df_risky))
+
+                        for i in range(top_n):
                             row = df_risky.iloc[i]
                             with cols[i]:
                                 st.error(f"**{row['Hotel_Name']}**")
-                                st.metric("Percentuale Disastri", f"{row['disaster_pct']}%", delta="Rischio Alto", delta_color="inverse")
-                                st.caption(f"Media Ufficiale: {row['Average_Score']} | Disastri totali: {row['disaster_count']}")
-                        
+                                st.metric(
+                                    "Disastri (≤ 4.0)",
+                                    f"{row['disaster_pct']:.2f}%",
+                                    delta="Rischio alto",
+                                    delta_color="inverse"
+                                )
+                                st.caption(
+                                    f"⭐ Avg hotel: {row['avg_hotel_score']:.2f} | "
+                                    f"⭐ Avg reviewer: {row['mean_reviewer_score']:.2f} | "
+                                    f"🧾 Review: {int(row['total_reviews'])} | "
+                                    f"💥 Disastri: {int(row['disaster_count'])}"
+                                )
+                                if pd.notna(row.get("p05_score", None)):
+                                    st.caption(f"📉 P05 score: {row['p05_score']:.2f}")
+
                         st.divider()
 
-                        # Tabella Dati
-                        st.markdown("### 📋 Lista Completa Hotel Rischiosi")
-                        st.dataframe(
-                            df_risky.style.format({
-                                "Average_Score": "{:.1f}",
-                                "mean_reviewer_score": "{:.2f}",
-                                "disaster_pct": "{:.1f}%",
-                                "total_reviews": "{:.0f}"
-                            }),
-                            use_container_width=True,
-                            height=400
+                        # ---- Scatter robusto con Altair (color + size funzionano sempre) ----
+                        st.markdown("### 📉 Analisi visiva: ottimi ma pericolosi")
+                        st.caption("Asse X: media dei reviewer. Asse Y: % disastri (≤ 4.0). Dimensione: # recensioni. Colore: risk_index.")
+
+                        import altair as alt
+
+                        chart = (
+                            alt.Chart(df_risky)
+                            .mark_circle(opacity=0.85)
+                            .encode(
+                                x=alt.X("mean_reviewer_score:Q", title="Media Reviewer Score"),
+                                y=alt.Y("disaster_pct:Q", title="% Disastri (≤ 4.0)"),
+                                size=alt.Size("total_reviews:Q", title="Totale recensioni", scale=alt.Scale(zero=False)),
+                                color=alt.Color("risk_index:Q", title="Risk Index"),
+                                tooltip=[
+                                    alt.Tooltip("Hotel_Name:N", title="Hotel"),
+                                    alt.Tooltip("avg_hotel_score:Q", title="Avg hotel", format=".2f"),
+                                    alt.Tooltip("mean_reviewer_score:Q", title="Avg reviewer", format=".2f"),
+                                    alt.Tooltip("disaster_pct:Q", title="% disastri", format=".2f"),
+                                    alt.Tooltip("disaster_count:Q", title="# disastri"),
+                                    alt.Tooltip("total_reviews:Q", title="# recensioni"),
+                                    alt.Tooltip("risk_index:Q", title="risk_index", format=".2f"),
+                                ],
+                            )
+                            .properties(height=460)
                         )
-                        
-                        # Grafico Scatter: Media vs % Disastri
-                        st.markdown("### 📉 Analisi Visiva: Ottimi ma Pericolosi")
-                        st.caption("Asse X: Voto Medio (tutti > 8.0). Asse Y: Percentuale di voti <= 4.0.")
-                        
-                        st.scatter_chart(
-                            data=df_risky,
-                            x='mean_reviewer_score',
-                            y='disaster_pct',
-                            color='disaster_count',
-                            size='total_reviews',
-                            height=500
+                        st.altair_chart(chart, use_container_width=True)
+
+                        st.info(
+                            "💡 **Lettura**: più in alto ⇒ maggiore probabilità di un’esperienza pessima. "
+                            "Il colore e la dimensione aiutano a distinguere rischi 'affidabili' (molte recensioni) da outlier."
                         )
-                        st.info("💡 **Lettura**: Più si va in alto nel grafico, più è probabile incappare in una pessima esperienza, nonostante la media alta.")
-                        
+
+                        # ---- Tabella completa ----
+                        if show_table_ui:
+                            st.markdown("### 📋 Lista completa")
+                            show_cols = [
+                                "Hotel_Name", "avg_hotel_score", "mean_reviewer_score",
+                                "disaster_pct", "disaster_count", "total_reviews", "risk_index", "p05_score"
+                            ]
+                            show_cols = [c for c in show_cols if c in df_risky.columns]
+
+                            df_show = df_risky[show_cols].copy()
+                            # Formattazione semplice (senza .style per evitare problemi)
+                            st.dataframe(df_show, use_container_width=True, height=420)
+
+        # ========= QUERY 7: EXPECTATION GAP =========
+        elif "Expectation Gap" in query_type:
+            st.subheader("🤯 Expectation Gap (Realtà vs Aspettativa)")
+
+            st.markdown("""
+            **Obiettivo**: misurare la delusione *relativa* (scarto tra voto dato e aspettativa media dell’hotel).  
+            **Definizione**: `gap = Reviewer_Score − Average_Score`  
+            - gap > 0 ⇒ esperienza migliore delle aspettative  
+            - gap < 0 ⇒ esperienza peggiore delle aspettative
+            """)
+
+            with st.expander("ℹ️ Guida alla lettura"):
+                st.markdown("""
+                - **Gap medio**: indica se, in media, una fascia supera o disattende le aspettative.
+                - **% delusioni**: quante recensioni hanno gap < 0 (fallimento rispetto alle aspettative).
+                - **Intensità della delusione**: media del gap *solo* sulle recensioni negative (gap < 0).  
+                Più è negativo ⇒ più “profonda” è la delusione quando succede.
+                """)
+
+            # Parametri (optional, ma utili)
+            with st.expander("⚙️ Impostazioni analisi", expanded=False):
+                min_reviews = st.number_input("Min recensioni per fascia (solo per stabilità statistica)", 0, 1000000, 0, step=100)
+                show_table = st.checkbox("Mostra tabella dati", value=True)
+
+            if st.button("🚀 Analizza il Gap", type="primary"):
+                with st.spinner("Calcolo in corso..."):
+                    df_gap = gestore.query_expectation_gap(st.session_state.df_hotel).toPandas()
+
+                if df_gap is None or len(df_gap) == 0:
+                    st.warning("Nessun dato trovato.")
+                else:
+                    # Assicura ordine logico (Economico → Standard → Premium → Luxury)
+                    ORDER = ["🥉 Economico (< 7.5)", "🥈 Standard (7.5-8.5)", "🥇 Premium (8.5-9.2)", "💎 Luxury (> 9.2)"]
+                    df_gap["expectation_bucket"] = df_gap["expectation_bucket"].astype(str)
+                    df_gap["bucket_order"] = df_gap["expectation_bucket"].apply(lambda x: ORDER.index(x) if x in ORDER else 999)
+                    df_gap = df_gap.sort_values("bucket_order").drop(columns=["bucket_order"])
+
+                    if min_reviews > 0:
+                        df_gap = df_gap[df_gap["num_reviews"] >= min_reviews]
+
+                    if len(df_gap) == 0:
+                        st.warning("Dopo il filtro, non restano fasce con abbastanza recensioni.")
                     else:
-                        st.success("✅ **Nessun hotel rischioso trovato!** Tutti gli hotel con media > 8.0 hanno una percentuale di disastri sotto la soglia di allarme (5%).")
+                        st.markdown("### 📊 Risultati per fascia di prestigio")
+
+                        cols = st.columns(min(4, len(df_gap)))
+                        for i, row in enumerate(df_gap.itertuples(index=False)):
+                            gap_val = getattr(row, "avg_gap")
+                            pct_del = getattr(row, "pct_delusioni")
+                            bucket = getattr(row, "expectation_bucket")
+
+                            # Colore delta: se gap medio è negativo -> inverse
+                            delta_color = "inverse" if gap_val < 0 else "normal"
+
+                            with cols[i % len(cols)]:
+                                st.metric(
+                                    label=bucket,
+                                    value=f"{gap_val:.2f}",
+                                    delta="Gap medio",
+                                    delta_color=delta_color
+                                )
+                                st.caption(f"📉 Delusioni: **{pct_del:.1f}%**")
+                                st.progress(min(1.0, max(0.0, pct_del / 100.0)))
+
+                        st.divider()
+
+                        # Grafico serio con Altair (controllo completo)
+                        st.markdown("### 📉 Intensità della delusione (solo gap < 0)")
+                        st.caption("Media del gap condizionata al fatto che la recensione sia negativa: più è basso, più la delusione è profonda.")
+
+                        import altair as alt
+
+                        chart = (
+                            alt.Chart(df_gap)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("expectation_bucket:N", sort=ORDER, title="Fascia"),
+                                y=alt.Y("intensita_delusione_media:Q", title="Intensità media (gap < 0)"),
+                                tooltip=[
+                                    alt.Tooltip("expectation_bucket:N", title="Fascia"),
+                                    alt.Tooltip("intensita_delusione_media:Q", title="Intensità", format=".3f"),
+                                    alt.Tooltip("pct_delusioni:Q", title="% delusioni", format=".2f"),
+                                    alt.Tooltip("num_reviews:Q", title="# recensioni")
+                                ],
+                            )
+                            .properties(height=380)
+                        )
+                        st.altair_chart(chart, use_container_width=True)
+
+                # Insight robusto (senza assumere posizioni)
+                st.markdown("### 🧠 Insight automatico")
+
+                # Trova fascia più severa (intensità più negativa) e più “morbida”
+                most_severe = df_gap.loc[df_gap["intensita_delusione_media"].idxmin()]
+                least_severe = df_gap.loc[df_gap["intensita_delusione_media"].idxmax()]
+
+                sev_bucket = most_severe["expectation_bucket"]
+                sev_val = abs(most_severe["intensita_delusione_media"])
+
+                mild_bucket = least_severe["expectation_bucket"]
+                mild_val = abs(least_severe["intensita_delusione_media"])
+
+                diff = sev_val - mild_val
+
+                if diff >= 0.30:
+                    st.warning(
+                        f"⚠️ La delusione è **più intensa** nella fascia **{sev_bucket}** "
+                        f"(≈ **{sev_val:.2f}** punti sotto le aspettative) rispetto alla fascia **{mild_bucket}** "
+                        f"(≈ **{mild_val:.2f}**)."
+                    )
+                else:
+                    st.info("ℹ️ L'intensità della delusione è complessivamente simile tra le fasce.")
+
+                # Tabella (facoltativa)
+                if show_table:
+                    st.markdown("### 📋 Dati aggregati")
+                    st.dataframe(df_gap, use_container_width=True)
+
     else:
         st.info("💡 Carica i dati dalla sidebar per iniziare l'analisi.")
