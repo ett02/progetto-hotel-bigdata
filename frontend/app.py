@@ -778,9 +778,9 @@ elif page == "🧠 Insight Avanzati":
         elif query_type == "📏 Lunghezza Recensioni":
             st.subheader("📏 Asimmetria Emotiva: la delusione genera più testo?")
             st.markdown("""
-            **Obiettivo**: misurare l’asimmetria emotiva in modo quantitativo.  
+            **Obiettivo**: misurare l'asimmetria emotiva in modo quantitativo.  
             Usiamo le word-count già presenti nel dataset (parte positiva vs negativa).  
-            - **Delta** = (negativo − positivo) ⇒ quanto “sfogo” in più c’è nella parte negativa  
+            - **Delta** = (negativo positivo) ⇒ quanto “sfogo” in più c'è nella parte negativa  
             - **Negativity ratio** = negativo / positivo ⇒ metrica relativa (solo se il positivo non è troppo piccolo)  
             - **% presenza testo** ⇒ quanto spesso le persone scrivono davvero una parte positiva/negativa
             """)
@@ -915,7 +915,6 @@ elif page == "🧠 Insight Avanzati":
                         st.markdown("### 📋 Tabella completa")
                         st.dataframe(df_emo, use_container_width=True, height=420)
 
-
         # ========= QUERY 5: AFFIDABILITÀ VOTO =========
         elif "Affidabilità Voto" in query_type:
             st.subheader("📉 Affidabilità del Voto (Coerenza)")
@@ -1002,7 +1001,6 @@ elif page == "🧠 Insight Avanzati":
                         st.markdown("### 📋 Dettaglio completo")
                         # Evito .style: più stabile
                         st.dataframe(df_std.head(top_k), use_container_width=True, height=420)
-
 
         # ========= QUERY 6: HOTEL RISCHIOSI =========
         elif "Hotel Rischiosi" in query_type:

@@ -99,28 +99,36 @@ Analisi mirate per rispondere a domande di business precise.
 ### 📏 D. Asimmetria Emotiva (Review Length)
 - **Domanda:** *La delusione genera più testo della felicità?*
 - **Logica:**
-  - Suddivide le recensioni in 4 bucket: *Arrabbiato* (<5), *Deluso* (5-7.5), *Soddisfatto* (7.5-9), *Felice* (>9).
-  - Somma il numero di parole negative (`Negative_Review`) e positive (`Positive_Review`) per ogni gruppo.
-  - Calcola il **Negativity Ratio**: Quanto è più lunga la parte negativa rispetto alla positiva?
+  - Sfrutta i conteggi parole (`Review_Total_Negative_Word_Counts` vs `Positive`) già nel dataset.
+  - Calcola il **Delta** (Differenza assoluta parole neg-pos) e il **Negativity Ratio** (solo se testo positivo rilevante).
+  - Misura la **% di presenza** testo: quanto spesso il campo "Negative" o "Positive" viene riempito.
 - **Output:**
-  - **Metriche**: Ratio per ogni fascia (es. "3.5x" significa che scrivono 3 volte e mezzo in più).
-  - **Grafico**: Barre che confrontano visivamente la "voglia di scrivere" in negativo (Rosso) vs positivo (Verde).
-  - **Insight**: Conferma statistica se l'hotel soffre dell'effetto "Sfogo" (Clienti che scrivono papiri solo per lamentarsi).
+  - **Metriche**: Delta medio parole per fascia di voto (es. "Arrabbiato scrive +20 parole").
+  - **Grafico (Altair)**: Bar chart comparativo pulito e interattivo.
+  - **Insight**: Conferma statistica dell'effetto "Sfogo" se il delta supera una soglia significativa.
 
 ### 📉 E. Affidabilità Voto (Data Consistency)
 - **Domanda:** *Il voto medio è affidabile o c'è troppo disaccordo?*
 - **Logica:**
-  - Calcola la **Deviazione Standard** dei voti per ogni hotel.
-  - Bassa deviazione = Opinioni coerenti (Affidabile).
-  - Alta deviazione = Opinioni polarizzate "Love or Hate" (Rischioso).
-- **Output:** Mappa del rischio (Scatter plot) che mostra la relazione tra Qualità e Incertezza.
+  - Calcola la **Deviazione Standard (σ)** reale sui `Reviewer_Score` (misura di quanto i voti sono sparpagliati).
+  - Calcola il **CV (Coefficient of Variation)** per normalizzare la dispersione rispetto alla media.
+- **Output:**
+  - Mappa (Altair): Scatter plot "Qualità vs Incertezza".
+  - **Interpretazione**:
+    - *In basso a destra*: Hotel Top e Solidi (Tutti concordano che è bello).
+    - *In alto*: Hotel Rischiosi (C'è chi lo ama e chi lo odia).
+    - Tooltip interattivi per esplorare ogni singolo hotel.
 
 ### ⚠️ F. Hotel Rischiosi (High Risk Detection)
 - **Domanda:** *L'hotel sembra ottimo, ma nasconde scheletri nell'armadio?*
 - **Logica:**
-  - Filtra hotel con **Media > 8.0** (apparentemente eccellenti).
-  - Ma con **> 5% di recensioni disastrose** (voto <= 4.0).
-- **Output:** Lista di "Trappole potenziali": hotel con media alta ma probabilità elevata di pessima esperienza.
+  - Filtra hotel con **Media > 8.0** (apparenza eccellente).
+  - Calcola la **% Disastri** (voti ≤ 4.0).
+  - **Risk Index (Smart Ranking)**: Usa la formula `Disaster% * log(NumReviews)` per dare più peso a chi ha grandi numeri (un 10% di disastri su 1000 recensioni è molto più grave che su 10).
+  - Calcola il **Percentile 5% (P05)**: Il voto "minimo garantito" nel 95% dei casi.
+- **Output:**
+  - Lista prioritaria di "Trappole": non solo chi ha qualche voto basso, ma chi ha un *pattern* sistematico di disastri nascosto dalla media alta.
+  - Grafico Scatter a 3 dimensioni (Media, % Disastri, Rischio) per isolare visivamente gli outlier pericolosi.
 
 ### 🤯 G. Expectation Gap (Realtà vs Aspettativa)
 - **Domanda:** *Quanto fa male cadere dall'alto? (Aspettative deluse)*
