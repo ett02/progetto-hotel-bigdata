@@ -23,7 +23,7 @@ def get_backend():
 gestore = get_backend()
 
 # Titolo e Descrizione
-st.title("🏨 Analisi Big Data: Recensioni Hotel")
+st.title("🏨 Recensioni Hotel")
 st.markdown("""
 Questa applicazione utilizza **Apache Spark** per analizzare un dataset di recensioni di hotel. 
 Include algoritmi di Machine Learning per Sentiment Analysis, Clustering e Topic Modeling.
@@ -679,118 +679,219 @@ elif page == "🧠 Insight Avanzati":
         
         # ========= QUERY 1: NAZIONALITÀ =========
         if "Nazionalità" in query_type:
-            st.subheader("🌍 Analisi per Nazionalità")
+            st.subheader("🌍 Analisi per Nazionalità (stile di valutazione)")
             st.markdown("""
-            **Obiettivo**: Scoprire quali nazionalità danno mediamente i **voti più alti** o **più bassi**.  
-            **Utilità**: Capire le aspettative culturali e targetizzare meglio il marketing.
+            **Obiettivo**: osservare differenze nello **stile di valutazione** (più severo vs più indulgente) tra gruppi di recensori.  
+            **Nota**: non misura “qualità degli hotel” ma **tendenza media del voto** per nazionalità, su campioni numericamente significativi.
             """)
-            
+
             with st.expander("ℹ️ Come funziona"):
                 st.markdown("""
-                - **Filtraggio**: Solo nazionalità con >100 recensioni (per affidabilità statistica)
-                - **Metriche**: Voto medio, deviazione standard, min/max
-                - **Interpretazione**: 
-                  - **Voto alto** → Turisti soddisfatti, aspettative moderate
-                  - **Voto basso** → Turisti esigenti, standard elevati
-                  - **Alta deviazione** → Opinioni molto diverse
+                - **Filtro**: solo nazionalità con >100 recensioni (maggiore affidabilità)
+                - **Metriche**: voto medio, deviazione standard (σ), min/max
+                - **Interpretazione**:
+                - **Voto medio più basso** → valutazione mediamente più severa
+                - **σ alta** → giudizi più discordanti (love/hate)
                 """)
-            
+
             if st.button("🚀 Esegui Analisi Nazionalità", type="primary"):
                 with st.spinner("Analisi in corso..."):
                     df_naz = gestore.query_nazionalita_critiche(st.session_state.df_hotel).toPandas()
-                    
-                    if len(df_naz) > 0:
-                        # Metriche generali
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("📌 Nazionalità Analizzate", len(df_naz))
-                        with col2:
-                            std_media = df_naz['deviazione_std'].mean()
-                            st.metric("📊 Deviazione Std Media", f"{std_media:.2f}")
-                        with col3:
-                            range_voti = df_naz['voto_medio'].max() - df_naz['voto_medio'].min()
-                            st.metric("📈 Range Voti", f"{range_voti:.2f}")
-                        
-                        st.divider()
-                        
-                        # Top/Bottom 5
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.markdown("### 😊 Top 5 - Più Generosi")
-                            top5 = df_naz.nlargest(5, 'voto_medio')[['Reviewer_Nationality', 'voto_medio', 'num_recensioni']]
-                            top5.columns = ['Nazionalità', 'Voto Medio', 'Recensioni']
-                            st.dataframe(top5, use_container_width=True, hide_index=True)
-                        
-                        with col2:
-                            st.markdown("### 😤 Top 5 - Più Critici")
-                            bottom5 = df_naz.nsmallest(5, 'voto_medio')[['Reviewer_Nationality', 'voto_medio', 'num_recensioni']]
-                            bottom5.columns = ['Nazionalità', 'Voto Medio', 'Recensioni']
-                            st.dataframe(bottom5, use_container_width=True, hide_index=True)
-                        
-                        # Grafico a barre (top 15)
-                        st.markdown("### 📊 Confronto Visivo (Top 15 + Bottom 15)")
-                        import pandas as pd
-                        df_viz = pd.concat([df_naz.head(15), df_naz.tail(15)])
-                        st.bar_chart(df_viz.set_index('Reviewer_Nationality')['voto_medio'])
-                    else:
-                        st.warning("Nessun dato trovato per questa analisi.")
+
+                if df_naz is None or len(df_naz) == 0:
+                    st.warning("Nessun dato trovato per questa analisi.")
+                else:
+                    # Assicuriamoci dei nomi colonna corretti
+                    # Backend nuovo: nationality_clean
+                    if "nationality_clean" not in df_naz.columns and "Reviewer_Nationality" in df_naz.columns:
+                        df_naz = df_naz.rename(columns={"Reviewer_Nationality": "nationality_clean"})
+
+                    # Metriche generali
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric("📌 Nazionalità analizzate", f"{len(df_naz)}")
+                    with c2:
+                        std_media = float(df_naz["deviazione_std"].mean())
+                        st.metric("📊 σ media", f"{std_media:.2f}")
+                    with c3:
+                        range_voti = float(df_naz["voto_medio"].max() - df_naz["voto_medio"].min())
+                        st.metric("📈 Range voto medio", f"{range_voti:.2f}")
+
+                    st.divider()
+
+                    # Top/Bottom 5 robusti
+                    left, right = st.columns(2)
+
+                    with left:
+                        st.markdown("### 😊 Top 5 – più indulgenti (voto medio più alto)")
+                        top5 = df_naz.nlargest(5, "voto_medio")[["nationality_clean", "voto_medio", "num_recensioni", "deviazione_std"]]
+                        top5.columns = ["Nazionalità", "Voto medio", "Recensioni", "σ"]
+                        st.dataframe(top5, use_container_width=True, hide_index=True)
+
+                    with right:
+                        st.markdown("### 😐 Top 5 – più severi (voto medio più basso)")
+                        bottom5 = df_naz.nsmallest(5, "voto_medio")[["nationality_clean", "voto_medio", "num_recensioni", "deviazione_std"]]
+                        bottom5.columns = ["Nazionalità", "Voto medio", "Recensioni", "σ"]
+                        st.dataframe(bottom5, use_container_width=True, hide_index=True)
+
+                    st.divider()
+
+                    # Grafico: top15 + bottom15 espliciti
+                    st.markdown("### 📊 Confronto visivo (15 più severi + 15 più indulgenti)")
+                    import pandas as pd
+
+                    bottom15 = df_naz.nsmallest(15, "voto_medio")
+                    top15 = df_naz.nlargest(15, "voto_medio")
+
+                    df_viz = pd.concat([bottom15, top15], axis=0)
+                    df_viz["label"] = df_viz["nationality_clean"] + " (" + df_viz["num_recensioni"].astype(int).astype(str) + ")"
+
+                    # Ordina per voto medio così il grafico è leggibile
+                    df_viz = df_viz.sort_values("voto_medio", ascending=True)
+
+                    st.bar_chart(df_viz.set_index("label")["voto_medio"])
+
+                    st.caption("Etichetta = Nazionalità (numero recensioni). σ e min/max sono disponibili nelle tabelle sopra.")
         
         # ========= QUERY 2: COSTRUZIONI =========
         elif "Lavori" in query_type:
             st.subheader("🏗️ Impatto dei Lavori in Corso")
             st.markdown("""
-            **Obiettivo**: Quantificare quanto i **lavori di ristrutturazione/costruzione** impattano negativamente sul voto.  
-            **Utilità**: Informare i clienti in anticipo e gestire le aspettative.
+            **Obiettivo**: stimare quanto le menzioni di ristrutturazioni/costruzioni impattino sul voto.  
+            **Metodo**: confronto tra gruppi (con lavori vs senza) + keyword più frequenti + campioni di recensioni.
             """)
-            
+
             with st.expander("ℹ️ Come funziona"):
                 st.markdown("""
-                - **Keywords**: construction, renovation, works, hammering, drilling, noise, building
-                - **Confronto**: Voto medio con lavori VS senza lavori
-                - **Interpretazione**:
-                  - **Differenza negativa** → I lavori riducono la soddisfazione
-                  - **Alta deviazione** → Esperienza molto variabile
+                - **Pattern lavori**: construction / renovation / drilling / hammering / works / building work  
+                - **Output**:
+                1) Statistiche per gruppo (media, σ, CI95)  
+                2) Top keyword principali nelle recensioni con lavori  
+                3) Esempi di recensioni reali (campioni)
                 """)
-            
+
+            with st.expander("⚙️ Impostazioni", expanded=False):
+                sample_size = st.slider("Numero esempi recensioni", 3, 15, 5)
+
             if st.button("🚀 Esegui Analisi Lavori", type="primary"):
                 with st.spinner("Cercando recensioni con menzioni di lavori..."):
-                    df_cost = gestore.query_impatto_costruzioni(st.session_state.df_hotel).toPandas()
-                    
-                    if len(df_cost) >= 2:
-                        # Estrai dati
-                        no_lavori = df_cost[df_cost['has_construction'] == False]
-                        si_lavori = df_cost[df_cost['has_construction'] == True]
-                        
-                        voto_no = no_lavori['voto_medio'].values[0] if len(no_lavori) > 0 else 0
-                        voto_si = si_lavori['voto_medio'].values[0] if len(si_lavori) > 0 else 0
-                        count_si = si_lavori['totale'].values[0] if len(si_lavori) > 0 else 0
-                        
-                        diff = voto_si - voto_no
-                        
-                        # Metriche
-                        col1, col2,col3 = st.columns(3)
-                        with col1:
-                            st.metric("🏨 Senza Lavori", f"{voto_no:.2f}", help="Voto medio quando non ci sono lavori")
-                        with col2:
-                            st.metric("🏗️ Con Lavori", f"{voto_si:.2f}", 
-                                     delta=f"{diff:.2f}" if diff < 0 else f"+{diff:.2f}",
-                                     delta_color="inverse")
-                        with col3:
-                            st.metric("📊 Recensioni con Lavori", f"{count_si:,}")
-                        
-                        # Interpretazione
-                        if diff < -0.3:
-                            st.error(f"⚠️ **IMPATTO SIGNIFICATIVO**: I lavori riducono il voto di **{abs(diff):.2f} punti**. Consigliato informare i clienti in anticipo.")
-                        elif diff < 0:
-                            st.warning(f"🔸 **Impatto moderato**: I lavori riducono il voto di **{abs(diff):.2f} punti**.")
+                    result = gestore.query_impatto_costruzioni(st.session_state.df_hotel, sample_size=sample_size)
+
+                # --- Compatibilità: se backend vecchio ritorna DF, adattiamo ---
+                if isinstance(result, dict):
+                    stats_pdf = result["stats_df"].toPandas()
+                    kw_pdf = result["keywords_df"].toPandas()
+                    samples_pdf = result["samples_df"].toPandas()
+                else:
+                    # backend vecchio: solo stats
+                    stats_pdf = result.toPandas()
+                    kw_pdf = None
+                    samples_pdf = None
+
+                if stats_pdf is None or len(stats_pdf) == 0:
+                    st.warning("Dati insufficienti per l'analisi.")
+                else:
+                    # Label leggibili
+                    stats_pdf["gruppo"] = stats_pdf["has_construction"].map({True: "🏗️ Con lavori", False: "🏨 Senza lavori"})
+
+                    # Estrai gruppi se presenti
+                    row_no = stats_pdf[stats_pdf["has_construction"] == False]
+                    row_yes = stats_pdf[stats_pdf["has_construction"] == True]
+
+                    voto_no = float(row_no["voto_medio"].values[0]) if len(row_no) else None
+                    voto_yes = float(row_yes["voto_medio"].values[0]) if len(row_yes) else None
+                    n_yes = int(row_yes["totale"].values[0]) if len(row_yes) else 0
+
+                    ci_no = float(row_no["ci95"].values[0]) if (len(row_no) and "ci95" in row_no.columns) else None
+                    ci_yes = float(row_yes["ci95"].values[0]) if (len(row_yes) and "ci95" in row_yes.columns) else None
+
+                    # KPI
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric("🏨 Senza lavori (media)", f"{voto_no:.2f}" if voto_no is not None else "n/a",
+                                  help=f"CI95 ± {ci_no:.2f}" if ci_no is not None else None)
+                    with c2:
+                        if voto_no is not None and voto_yes is not None:
+                            diff = voto_yes - voto_no
+                            st.metric("🏗️ Con lavori (media)", f"{voto_yes:.2f}",
+                                      delta=f"{diff:.2f}" if diff < 0 else f"+{diff:.2f}",
+                                      delta_color="inverse" if diff < 0 else "normal",
+                                      help=f"CI95 ± {ci_yes:.2f}" if ci_yes is not None else None)
                         else:
-                            st.success("✅ Nessun impatto negativo rilevato.")
-                        
-                        # Grafico
-                        st.bar_chart(df_cost.set_index('has_construction')['voto_medio'])
-                    else:
-                        st.warning("Dati insufficienti per il confronto.")
+                            st.metric("🏗️ Con lavori (media)", "n/a")
+                    with c3:
+                        st.metric("📊 Recensioni con lavori", f"{n_yes:,}")
+
+                    # Interpretazione “più corretta”
+                    if voto_no is not None and voto_yes is not None:
+                        diff = voto_yes - voto_no
+
+                        # Se abbiamo CI, confrontiamo in modo conservativo
+                        if ci_no is not None and ci_yes is not None:
+                            # se |diff| > somma delle incertezze, è un segnale forte (euristica conservativa)
+                            threshold = ci_no + ci_yes
+                            if diff < -threshold:
+                                st.error(f"⚠️ **Impatto forte**: differenza **{diff:.2f}** oltre l'incertezza (±{threshold:.2f}).")
+                            elif diff < 0:
+                                st.warning(f"🔸 Impatto negativo ma vicino all'incertezza: differenza **{diff:.2f}** (±{threshold:.2f}).")
+                            else:
+                                st.success("✅ Nessun impatto negativo netto rilevato.")
+                        else:
+                            # fallback: soglie euristiche
+                            if diff < -0.3:
+                                st.error(f"⚠️ Impatto significativo: i lavori riducono il voto di **{abs(diff):.2f}** punti.")
+                            elif diff < 0:
+                                st.warning(f"🔸 Impatto moderato: riduzione di **{abs(diff):.2f}** punti.")
+                            else:
+                                st.success("✅ Nessun impatto negativo rilevato.")
+
+                st.divider()
+                # Grafico: media con (eventuali) error bars CI95
+                st.markdown("### 📈 Confronto visivo")
+                st.caption("Barre = voto medio. Se presente, barre d’errore = CI95.")
+
+                import altair as alt
+
+                base = alt.Chart(stats_pdf).encode(
+                    x=alt.X("gruppo:N", title="Gruppo"),
+                    tooltip=[
+                        alt.Tooltip("gruppo:N", title="Gruppo"),
+                        alt.Tooltip("voto_medio:Q", title="Voto medio", format=".2f"),
+                        alt.Tooltip("totale:Q", title="# recensioni"),
+                        alt.Tooltip("deviazione_std:Q", title="σ", format=".2f") if "deviazione_std" in stats_pdf.columns else alt.value(None),
+                        alt.Tooltip("ci95:Q", title="CI95", format=".2f") if "ci95" in stats_pdf.columns else alt.value(None),
+                    ]
+                )
+
+                bars = base.mark_bar().encode(
+                    y=alt.Y("voto_medio:Q", title="Voto medio")
+                )
+
+                if "ci95" in stats_pdf.columns and stats_pdf["ci95"].notna().any():
+                    err = base.mark_errorbar().encode(
+                        y=alt.Y("voto_medio:Q"),
+                        yError=alt.YError("ci95:Q")
+                    )
+                    st.altair_chart((bars + err).properties(height=320), use_container_width=True)
+                else:
+                    st.altair_chart(bars.properties(height=320), use_container_width=True)
+
+                # Keyword freq
+                if kw_pdf is not None and len(kw_pdf) > 0:
+                    st.divider()
+                    st.markdown("### 🔑 Keyword più frequenti (recensioni con lavori)")
+                    st.caption("Serve a capire quale aspetto dei lavori è più citato (drilling vs renovation vs construction).")
+
+                    top_kw = kw_pdf.head(10)
+                    st.dataframe(top_kw, use_container_width=True, height=280)
+
+                # Samples
+                if samples_pdf is not None and len(samples_pdf) > 0:
+                    st.divider()
+                    st.markdown("### 🧾 Esempi reali di recensioni (campione)")
+                    for i, r in samples_pdf.iterrows():
+                        with st.expander(f"{r['Hotel_Name']} | score={r['Reviewer_Score']} | kw={r.get('kw_main','')}", expanded=False):
+                            st.write(r["Negative_Review"])
         
         # ========= QUERY 3: TIPO VIAGGIO =========
         elif "Tipo Viaggio" in query_type:
@@ -892,7 +993,6 @@ elif page == "🧠 Insight Avanzati":
                             cols.append("ci95")
                         st.dataframe(df_viaggi[cols], use_container_width=True, height=320)
 
-        
         # ========= QUERY 4: ASIMMETRIA EMOTIVA (Lunghezza) =========
         elif query_type == "📏 Lunghezza Recensioni":
             st.subheader("📏 Asimmetria Emotiva: la delusione genera più testo?")

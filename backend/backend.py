@@ -148,7 +148,6 @@ class GestoreBigData:
     # ---------------------------------------------------------
     # ALGORITMO: CLUSTERING (K-Means) - FEATURE-BASED
     # ---------------------------------------------------------
-    
     def preprocessing_hotel_features(self, df_hotel):
         """
         Feature Engineering per clustering intelligente degli hotel.
@@ -292,7 +291,6 @@ class GestoreBigData:
     # ---------------------------------------------------------
     # 3. ALGORITMO: TOPIC MODELING (LDA)
     # ---------------------------------------------------------
-
     def esegui_topic_modeling(self, df_hotel, num_topics=3, evaluate_stability=True, top_terms=10):
         """
         Estrae topic latenti dalle recensioni NEGATIVE usando LDA.
@@ -447,51 +445,109 @@ class GestoreBigData:
     # ---------------------------------------------------------
     # 4. QUERY AVANZATE (Nuove richieste)
     # ---------------------------------------------------------
-    
-    def query_nazionalita_critiche(self, df_hotel):
+    def query_nazionalita_critiche(self, df_hotel, min_reviews=100):
         """
         Query 1: 'The Grumpy Tourist'.
-        Analizza quali nazionalità tendono dare voti più bassi o più alti.
-        MIGLIORAMENTI: Calcola deviazione standard, min/max, e percentili
+        Analizza quali nazionalità tendono a dare voti mediamente più bassi o più alti.
+
+        Statistiche:
+        - voto medio
+        - numero recensioni
+        - deviazione standard
+        - voto minimo e massimo
         """
-        from pyspark.sql.functions import stddev, min as spark_min, max as spark_max, percentile_approx
-        
-        result = df_hotel.groupBy("Reviewer_Nationality") \
+        from pyspark.sql.functions import (
+            avg, count, col, stddev, trim,
+            min as spark_min, max as spark_max, round
+        )
+
+        # Pulizia nazionalità (rimuove spazi inutili)
+        df_n = df_hotel.withColumn(
+            "nationality_clean",
+            trim(col("Reviewer_Nationality"))
+        )
+
+        result = (
+            df_n.groupBy("nationality_clean")
             .agg(
                 avg("Reviewer_Score").alias("voto_medio"),
-                count("Reviewer_Score").alias("num_recensioni"),
+                count("*").alias("num_recensioni"),
                 stddev("Reviewer_Score").alias("deviazione_std"),
                 spark_min("Reviewer_Score").alias("voto_min"),
-                spark_max("Reviewer_Score").alias("voto_max")
-            ) \
-            .filter(col("num_recensioni") > 100) \
-            .orderBy("voto_medio")
-        
+                spark_max("Reviewer_Score").alias("voto_max"),
+            )
+            .filter(col("num_recensioni") > min_reviews)
+            .withColumn("voto_medio", round(col("voto_medio"), 3))
+            .withColumn("deviazione_std", round(col("deviazione_std"), 3))
+            .orderBy(col("voto_medio").asc())  # dalla più severa alla più generosa
+        )
         return result
 
-    def query_impatto_costruzioni(self, df_hotel):
+    def query_impatto_costruzioni(self, df_hotel, sample_size=5):
         """
         Query 2: 'Construction Nightmare'.
         Analizza l'impatto dei lavori in corso sul voto dell'utente.
-        MIGLIORAMENTI: Aggiungi campioni di recensioni e conteggio parole chiave
+
+        Output:
+        - stats_df: statistiche per has_construction
+        - keywords_df: frequenza keyword (solo tra recensioni con lavori)
+        - samples_df: esempi di recensioni negative (solo con lavori)
         """
-        from pyspark.sql.functions import stddev
-        
-        # Creiamo una colonna flag se la recensione menziona lavori in corso
-        df_costruzioni = df_hotel.withColumn(
-            "has_construction", 
-            col("Negative_Review").rlike("(?i)construction|renovation|works|hammering|drilling|noise|building")
+        from pyspark.sql.functions import (
+            col, avg, count, stddev, lower, regexp_extract, lit, sqrt, round, rand, when
         )
-        
-        # Statistiche aggregate
-        stats = df_costruzioni.groupBy("has_construction") \
+
+        # 1) Pattern lavori (più specifico di "noise")
+        pattern = r"(?i)\b(construction|renovation|renovating|works|drilling|hammering|building work|jackhammer)\b"
+
+        df_c = (
+            df_hotel
+            .withColumn("neg_lc", lower(col("Negative_Review")))
+            .withColumn("has_construction", col("Negative_Review").rlike(pattern))
+            # conta quante keyword (almeno 1 se matcha)
+            .withColumn("kw_hit", when(col("has_construction") == True, lit(1)).otherwise(lit(0)))
+            # estrai la keyword principale matchata (prima occorrenza)
+            .withColumn("kw_main", regexp_extract(col("Negative_Review"), pattern, 1))
+        )
+
+        # 2) Statistiche aggregate
+        stats_df = (
+            df_c.groupBy("has_construction")
             .agg(
                 avg("Reviewer_Score").alias("voto_medio"),
-                count("Reviewer_Score").alias("totale"),
+                count("*").alias("totale"),
                 stddev("Reviewer_Score").alias("deviazione_std")
             )
-        
-        return stats
+            .withColumn("se", col("deviazione_std") / sqrt(col("totale")))
+            .withColumn("ci95", lit(1.96) * col("se"))
+            .withColumn("voto_medio", round(col("voto_medio"), 3))
+            .withColumn("deviazione_std", round(col("deviazione_std"), 3))
+            .withColumn("ci95", round(col("ci95"), 3))
+            .drop("se")
+            .orderBy("has_construction")
+        )
+
+        # 3) Frequenza keyword principali (solo recensioni con lavori)
+        keywords_df = (
+            df_c.filter(col("has_construction") == True)
+            .groupBy("kw_main")
+            .agg(count("*").alias("freq"))
+            .orderBy(col("freq").desc())
+        )
+
+        # 4) Campioni (solo recensioni con lavori)
+        samples_df = (
+            df_c.filter(col("has_construction") == True)
+            .select("Hotel_Name", "Reviewer_Score", "Negative_Review", "kw_main")
+            .orderBy(rand())
+            .limit(sample_size)
+        )
+
+        return {
+            "stats_df": stats_df,
+            "keywords_df": keywords_df,
+            "samples_df": samples_df
+        }
 
     def query_coppie_vs_famiglie(self, df_hotel):
         """
@@ -755,4 +811,3 @@ class GestoreBigData:
               )
         )
         return result
-
