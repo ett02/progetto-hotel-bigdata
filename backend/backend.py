@@ -307,108 +307,115 @@ class GestoreBigData:
         from pyspark.ml.feature import RegexTokenizer, StopWordsRemover, CountVectorizer
         from pyspark.ml.clustering import LDA
 
-        # ---------- 1) Filtri negative review "significative" ----------
+        # Filtro le recensioni negative significative
         df_neg = df_hotel.filter(
-            (col("Negative_Review") != "No Negative") &
-            col("Negative_Review").isNotNull() &
-            (length(col("Negative_Review")) > 30)
+            (col("Negative_Review") != "No Negative") & #escludiamo i "No Negative" 
+            col("Negative_Review").isNotNull() & #escludiamo i null
+            (length(col("Negative_Review")) > 30) #escludiamo testi troppo corti
         )
 
-        df_neg = df_neg.withColumn("review_lower", lower(col("Negative_Review")))
+        df_neg = df_neg.withColumn("review_lower", lower(col("Negative_Review"))) #normalizziamo in minuscolo
 
-        df_neg = df_neg.persist(StorageLevel.MEMORY_AND_DISK)
-        num_reviews = df_neg.count()
+        df_neg = df_neg.persist(StorageLevel.MEMORY_AND_DISK) #salviamo in memoria poiché verrà riutilizzato più volte
+        num_reviews = df_neg.count() #numero di recensioni negative significative
 
-        # ---------- 2) Preprocessing testo (tokenizer robusto unicode) ----------
-        tokenizer = RegexTokenizer(
+        #ora andreamo ad usare i transformere per RegexTokenizer, StopWordsRemover e Estimator CountVectorizer 
+        #in modo da estrarre solo le parole significative
+        
+        # pre processing del testo in modo da estrarre solo le parole significative, creiamo delle semplici colonne, 
+        # che sono gli output dei vari transformer 
+        tokenizer = RegexTokenizer( #transformer, non fa fit poiché non impara nulla dal dataset
             inputCol="review_lower",
             outputCol="words",
-            pattern="\\p{L}{3,}",
+            pattern="\\p{L}{3,}", #qualsiasi sequenza di almeno 3 caratteri alfabetici rimuoviamo rumore tipo: ok, a, an, the, etc.
             gaps=False
         )
 
-        # Stopwords base + (consigliato) stopwords di dominio
+        # Stopwords base + stopwords di dominio, questo perché così non consideriamo parole generiche ma solo quelle significative per il nostro problema
         domain_stop = ["hotel", "room", "rooms", "stay", "staff", "place", "night", "nights"]
-        remover = StopWordsRemover(
+        remover = StopWordsRemover(#transformer, non fa fit poiché non impara nulla dal dataset
             inputCol="words",
             outputCol="filtered",
             stopWords=StopWordsRemover.loadDefaultStopWords("english") + domain_stop
         )
 
         # minDF deve essere int (>= 15 documenti)
-        cv = CountVectorizer(
+        cv = CountVectorizer(#estimator, fa fit, perché deve essere addestrato sul dataset
             inputCol="filtered",
             outputCol="features",
-            vocabSize=1500,
-            minDF=15
+            vocabSize=1500, # numero massimo di termini da considerare nel vocabolario
+            minDF=15 # teniamo termini presenti in almeno 15 recensioni
         )
 
-        # ---------- 3) Fissa vocabolario/features UNA sola volta ----------
-        feat_pipeline = Pipeline(stages=[tokenizer, remover, cv])
-        feat_model = feat_pipeline.fit(df_neg)
-        df_feat = feat_model.transform(df_neg).select("features")
+        # Fissa vocabolario/features UNA sola volta 
+        feat_pipeline = Pipeline(stages=[tokenizer, remover, cv])#pipeline di pre processing per estrarre solo le parole significative
+        feat_model = feat_pipeline.fit(df_neg)#addestriamo il pipeline di pre processing 
+        df_feat = feat_model.transform(df_neg).select("features")#applichiamo il pipeline di pre processing e teniamo solo le features
 
-        cv_model = feat_model.stages[2]
-        vocab = cv_model.vocabulary
+        cv_model = feat_model.stages[2]# stages ci restituisce i modelli addestrati, in questo caso il CountVectorizer poiche inseriamo 2
+        vocab = cv_model.vocabulary # attributo del CountVectorizer che contiene il vocabolario di parole apprese
 
         # Helper: estrazione top-terms (lista di liste) da lda_model
         def extract_topic_terms(lda_model, vocab, top_terms):
-            topics = lda_model.describeTopics(maxTermsPerTopic=top_terms).collect()
-            out = []
-            for r in topics:
-                inds = r["termIndices"]
-                out.append([vocab[int(i)] for i in inds if int(i) < len(vocab)])
+            topics = lda_model.describeTopics(maxTermsPerTopic=top_terms).collect()# describeTopics restituisce i topic in formato
+            # DataFrame dal modello LDA passato in input
+            out = [] # lista di liste che conterrà i top-terms per ogni topic
+            for r in topics:#per ogni topic r del DataFrame
+                inds = r["termIndices"] # estraiamo gli indici dei termini
+                out.append([vocab[int(i)] for i in inds if int(i) < len(vocab)]) # aggiungiamo i termini al vocabolario 
+                #inds è una lista di indici, vocab è il vocabolario, int(i) converte l'indice in intero, 
+                # int(i) < len(vocab) controlla che l'indice sia valido
             return out  # list of topics -> list of terms
 
         # Helper: Jaccard
-        def jaccard(a, b):
-            sa, sb = set(a), set(b)
-            if len(sa) == 0 and len(sb) == 0:
+        def jaccard(a, b): # misura di similarità tra due insiemi, restituisce un valore tra 0 e 1, misura quanto due insiemi si sovrappongono
+            sa, sb = set(a), set(b) #convertiamo le liste in insiemi
+            if len(sa) == 0 and len(sb) == 0:#se sono vuoti restituiamo 1.0
                 return 1.0
-            if len(sa) == 0 or len(sb) == 0:
+            if len(sa) == 0 or len(sb) == 0:#se uno è vuoto restituiamo 0.0
                 return 0.0
-            return len(sa.intersection(sb)) / len(sa.union(sb))
+            return len(sa.intersection(sb)) / len(sa.union(sb)) # intersezione / unione, misura di similarità tra due insiemi
 
         # Helper: matching greedy topic-to-topic tra due run
         def greedy_match(topics_A, topics_B):
-            used = set()
-            matches = []
-            for i, ta in enumerate(topics_A):
-                best_j, best_sim = None, -1.0
-                for j, tb in enumerate(topics_B):
-                    if j in used:
+            used = set() # insieme degli indici dei topic già usati
+            matches = [] # lista dei match finali
+            for i, ta in enumerate(topics_A): # per ogni topic i di A
+                best_j, best_sim = None, -1.0 # inizializziamo il miglior match a None e la similarità a -1.0
+                for j, tb in enumerate(topics_B): # per ogni topic j di B
+                    if j in used: # se il topic j è già stato usato, saltiamo
                         continue
-                    sim = jaccard(ta, tb)
-                    if sim > best_sim:
-                        best_sim = sim
-                        best_j = j
-                used.add(best_j)
-                matches.append((i, best_j, best_sim))
+                    sim = jaccard(ta, tb) # calcoliamo la similarità tra i due topic
+                    if sim > best_sim: # se la similarità è maggiore di quella attuale
+                        best_sim = sim # aggiorniamo la similarità
+                        best_j = j # aggiorniamo il miglior match
+                used.add(best_j) # aggiungiamo il miglior match all'insieme degli usati
+                matches.append((i, best_j, best_sim)) # aggiungiamo il match alla lista dei match
             return matches  # (topicA, topicB, sim)
 
         # ---------- 4) Fit modello "principale" ----------
-        lda_main = LDA(k=num_topics, maxIter=20, optimizer="online", seed=42)
-        lda_model_main = lda_main.fit(df_feat)
+        lda_main = LDA(k=num_topics, maxIter=20, optimizer="online", seed=42) #creiamo il modello LDA
+        lda_model_main = lda_main.fit(df_feat)#addestriamo il modello LDA
 
-        topics_data_main = lda_model_main.describeTopics(maxTermsPerTopic=top_terms)
-        log_likelihood = float(lda_model_main.logLikelihood(df_feat))
-        log_perplexity = float(lda_model_main.logPerplexity(df_feat))
+        topics_data_main = lda_model_main.describeTopics(maxTermsPerTopic=top_terms)#estraggo i topic dal modello LDA addestrato
+        log_likelihood = float(lda_model_main.logLikelihood(df_feat))#calcolo la log-likelihood
+        log_perplexity = float(lda_model_main.logPerplexity(df_feat))#calcolo la log-perplexity sono utili come indicatori  non come verità assolute
 
         stability = None
         stability_table = None
         compare_topics = None
 
         # ---------- 5) Passo 6: stability check (seed diverso) ----------
-        if evaluate_stability:
-            lda_alt = LDA(k=num_topics, maxIter=20, optimizer="online", seed=99)
-            lda_model_alt = lda_alt.fit(df_feat)
+        if evaluate_stability:#se evaluate_stability è True, eseguiamo lo stability check
+            lda_alt = LDA(k=num_topics, maxIter=20, optimizer="online", seed=99)#creiamo un altro modello LDA con seed diverso
+            lda_model_alt = lda_alt.fit(df_feat)#addestriamo il modello LDA
 
-            terms_main = extract_topic_terms(lda_model_main, vocab, top_terms)
-            terms_alt = extract_topic_terms(lda_model_alt, vocab, top_terms)
+            terms_main = extract_topic_terms(lda_model_main, vocab, top_terms)#estraggo i topic dal modello main LDA addestrato
+            terms_alt = extract_topic_terms(lda_model_alt, vocab, top_terms)#estraggo i topic dal modello alt LDA addestrato
 
-            matches = greedy_match(terms_main, terms_alt)
+            matches = greedy_match(terms_main, terms_alt)#trovo i match tra i topic
 
-            # costruisci risultati: per-topic + overall
+            # costruisci una tabella con i risultati: per-topic + overall
             per_topic = []
             for a, b, sim in matches:
                 per_topic.append({
@@ -419,9 +426,10 @@ class GestoreBigData:
                     "alt_terms": terms_alt[b]
                 })
 
-            overall = sum(x["jaccard"] for x in per_topic) / len(per_topic)
+            overall = sum(x["jaccard"] for x in per_topic) / len(per_topic)#navigo la tabella per righe x e sommo i jaccard 
+            #e divido per il numero di topic così ottengo la media di tutti i topic
 
-            stability = float(overall)
+            stability = float(overall)#preparo i risultato per l'output
             stability_table = per_topic  # lista di dict pronti per pandas
             compare_topics = {
                 "seed_main": 42,
