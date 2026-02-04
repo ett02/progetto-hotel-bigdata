@@ -498,25 +498,41 @@ class GestoreBigData:
         Query 3: 'Couple vs Family'.
         MIGLIORAMENTI: Categorie più complete e statistiche aggregate
         """
-        from pyspark.sql.functions import stddev
+        from pyspark.sql.functions import when, col, avg, count, stddev, lower, sqrt, round, lit
         
-        df_viaggi = df_hotel.withColumn(
+        df_viaggi = df_hotel.withColumn("tags_lc", lower(col("Tags")))
+        # Ordine categorie: Solo / Family / Group / Couple / Other
+        df_viaggi = df_viaggi.withColumn(
             "tipo_viaggio",
-            when(col("Tags").like("%Couple%"), "👫 Coppia")
-            .when(col("Tags").like("%Family%"), "👨‍👩‍👧‍👦 Famiglia")
-            .when(col("Tags").like("%Solo traveler%"), "🚶 Solo")
-            .when(col("Tags").like("%Group%"), "👥 Gruppo")
+            when(col("tags_lc").contains("solo traveler"), "🚶 Solo")
+            .when(col("tags_lc").contains("family"), "👨‍👩‍👧‍👦 Famiglia")
+            .when(col("tags_lc").contains("group"), "👥 Gruppo")
+            .when(col("tags_lc").contains("couple"), "👫 Coppia")
             .otherwise("❓ Altro")
         )
         
-        return df_viaggi.groupBy("tipo_viaggio") \
+        agg = (
+            df_viaggi.groupBy("tipo_viaggio")
             .agg(
                 avg("Reviewer_Score").alias("voto_medio"),
-                count("Reviewer_Score").alias("num_recensioni"),
-                stddev("Reviewer_Score").alias("deviazione_std")
-            ) \
-            .filter(col("num_recensioni") > 50) \
+                count("*").alias("num_recensioni"),
+                stddev("Reviewer_Score").alias("deviazione_std"),
+            )
+            .filter(col("num_recensioni") > 50)
+        )
+        # CI 95% circa: mean ± 1.96 * (std/sqrt(n))
+        agg = agg.withColumn("se", col("deviazione_std") / sqrt(col("num_recensioni")))
+        agg = agg.withColumn("ci95", lit(1.96) * col("se"))
+
+        # Pulizia output
+        agg = (
+            agg.withColumn("voto_medio", round(col("voto_medio"), 3))
+            .withColumn("deviazione_std", round(col("deviazione_std"), 3))
+            .withColumn("ci95", round(col("ci95"), 3))
             .orderBy(col("voto_medio").desc())
+        )
+
+        return agg.drop("se")
 
     def query_lunghezza_recensioni(self, df_hotel):
         """

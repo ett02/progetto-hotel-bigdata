@@ -796,46 +796,102 @@ elif page == "🧠 Insight Avanzati":
         elif "Tipo Viaggio" in query_type:
             st.subheader("👥 Analisi per Tipo di Viaggio")
             st.markdown("""
-            **Obiettivo**: Capire quale **target** (coppie, famiglie, solitari) è più soddisfatto.  
-            **Utilità**: Ottimizzare servizi e marketing per il target giusto.
+            **Obiettivo**: capire quale target (coppie, famiglie, solitari, gruppi) è più soddisfatto.  
+            **Utilità**: supportare scelte di marketing/servizi in base al segmento più “critico” o più “profittevole”.
+            (Nota: qui misuriamo soddisfazione tramite `Reviewer_Score` e consistenza tramite dispersione.)
             """)
-            
+
             with st.expander("ℹ️ Come funziona"):
                 st.markdown("""
-                - **Categorie**: Coppia, Famiglia, Solo, Gruppo, Altro
-                - **Filtro**: Solo gruppi con >50 recensioni
-                - **Interpretazione**:
-                  - **Voto alto** → Target soddisfatto
-                  - **Bassa deviazione** → Esperienza consistente
+                - **Categorie**: Coppia, Famiglia, Solo, Gruppo, Altro  
+                - **Filtro**: solo gruppi con > 50 recensioni  
+                - **Interpretazione**:  
+                - **Voto medio alto** ⇒ target più soddisfatto  
+                - **σ bassa** ⇒ esperienza più consistente  
+                - **CI95 (se presente)** ⇒ incertezza della media (più piccolo = stima più affidabile)
                 """)
-            
+
+            with st.expander("⚙️ Impostazioni", expanded=False):
+                show_table = st.checkbox("Mostra tabella completa", value=True)
+
             if st.button("🚀 Esegui Analisi Tipo Viaggio", type="primary"):
                 with st.spinner("Estraendo tag di viaggio..."):
                     df_viaggi = gestore.query_coppie_vs_famiglie(st.session_state.df_hotel).toPandas()
-                    
-                    if len(df_viaggi) > 0:
-                        # Metriche
-                        st.markdown("### 📊 Risultati per Categoria")
-                        for idx, row in df_viaggi.iterrows():
-                            col1, col2, col3 = st.columns([2, 1, 1])
-                            with col1:
-                                st.metric(row['tipo_viaggio'], f"{row['voto_medio']:.2f} ⭐")
-                            with col2:
-                                st.caption(f"📝 {row['num_recensioni']:,} recensioni")
-                            with col3:
-                                st.caption(f"📊 σ={row['deviazione_std']:.2f}")
-                        
-                        st.divider()
-                        
-                        # Grafico
-                        st.markdown("### 📈 Confronto Visivo")
-                        st.bar_chart(df_viaggi.set_index('tipo_viaggio')['voto_medio'])
-                        
-                        # Insight
-                        best = df_viaggi.iloc[0]
-                        st.success(f"🏆 **Target più soddisfatto**: {best['tipo_viaggio']} con {best['voto_medio']:.2f}/10")
+
+                if df_viaggi is None or len(df_viaggi) == 0:
+                    st.warning("Nessun dato trovato.")
+                else:
+                    # Arrotonda per UI (evita style)
+                    for c in ["voto_medio", "deviazione_std", "ci95"]:
+                        if c in df_viaggi.columns:
+                            df_viaggi[c] = df_viaggi[c].astype(float).round(3)
+
+                    # Best target robusto (non dipende dall'ordine)
+                    best = df_viaggi.loc[df_viaggi["voto_medio"].idxmax()]
+                    worst = df_viaggi.loc[df_viaggi["voto_medio"].idxmin()]
+
+                    # KPI cards (layout fisso)
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric("🏆 Target più soddisfatto", best["tipo_viaggio"])
+                    with c2:
+                        st.metric("⭐ Voto medio (best)", f"{best['voto_medio']:.2f}/10")
+                    with c3:
+                        st.metric("😬 Target meno soddisfatto", worst["tipo_viaggio"])
+
+                    st.divider()
+
+                    st.markdown("### 📈 Confronto visivo (media + affidabilità)")
+                    st.caption("Barre = voto medio. Se presente, barre d’errore = CI95 (1.96 * std/sqrt(n)). Tooltip con σ e #recensioni.")
+
+                    import altair as alt
+
+                    # grafico base: bar del voto medio
+                    base = alt.Chart(df_viaggi).encode(
+                        x=alt.X("tipo_viaggio:N", sort="-y", title="Tipo viaggio"),
+                        tooltip=[
+                            alt.Tooltip("tipo_viaggio:N", title="Categoria"),
+                            alt.Tooltip("voto_medio:Q", title="Voto medio", format=".2f"),
+                            alt.Tooltip("num_recensioni:Q", title="# recensioni"),
+                            alt.Tooltip("deviazione_std:Q", title="σ", format=".2f"),
+                        ],
+                    )
+
+                    bars = base.mark_bar().encode(
+                        y=alt.Y("voto_medio:Q", title="Voto medio")
+                    )
+
+                    if "ci95" in df_viaggi.columns and df_viaggi["ci95"].notna().any():
+                        # Error bars: mean ± ci95
+                        err = base.mark_errorbar().encode(
+                            y=alt.Y("voto_medio:Q"),
+                            yError=alt.YError("ci95:Q")
+                        )
+                        chart = (bars + err).properties(height=380)
                     else:
-                        st.warning("Nessun dato trovato.")
+                        chart = bars.properties(height=380)
+
+                    st.altair_chart(chart, use_container_width=True)
+
+                    st.divider()
+
+                    st.markdown("### 🧠 Insight automatico")
+                    msg = (
+                        f"Il target **più soddisfatto** risulta **{best['tipo_viaggio']}** "
+                        f"con voto medio **{best['voto_medio']:.2f}**."
+                    )
+                    if "ci95" in df_viaggi.columns and not pd.isna(best.get("ci95", None)):
+                        msg += f" (CI95 ± {best['ci95']:.2f})"
+                    st.success("🏆 " + msg)
+
+                    # Tabella completa
+                    if show_table:
+                        st.markdown("### 📋 Dettaglio completo")
+                        cols = ["tipo_viaggio", "voto_medio", "num_recensioni", "deviazione_std"]
+                        if "ci95" in df_viaggi.columns:
+                            cols.append("ci95")
+                        st.dataframe(df_viaggi[cols], use_container_width=True, height=320)
+
         
         # ========= QUERY 4: ASIMMETRIA EMOTIVA (Lunghezza) =========
         elif query_type == "📏 Lunghezza Recensioni":
