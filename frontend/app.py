@@ -723,13 +723,13 @@ elif page == "🧠 Insight Avanzati":
                     left, right = st.columns(2)
 
                     with left:
-                        st.markdown("### 😊 Top 5 – più indulgenti (voto medio più alto)")
+                        st.markdown("### 😊 Top 5 più indulgenti (voto medio più alto)")
                         top5 = df_naz.nlargest(5, "voto_medio")[["nationality_clean", "voto_medio", "num_recensioni", "deviazione_std"]]
                         top5.columns = ["Nazionalità", "Voto medio", "Recensioni", "σ"]
                         st.dataframe(top5, use_container_width=True, hide_index=True)
 
                     with right:
-                        st.markdown("### 😐 Top 5 – più severi (voto medio più basso)")
+                        st.markdown("### 😐 Top 5 più severi (voto medio più basso)")
                         bottom5 = df_naz.nsmallest(5, "voto_medio")[["nationality_clean", "voto_medio", "num_recensioni", "deviazione_std"]]
                         bottom5.columns = ["Nazionalità", "Voto medio", "Recensioni", "σ"]
                         st.dataframe(bottom5, use_container_width=True, hide_index=True)
@@ -1014,7 +1014,7 @@ elif page == "🧠 Insight Avanzati":
                 if df_emo is None or len(df_emo) == 0:
                     st.warning("Nessun dato trovato.")
                 else:
-                    # --- Ordine logico bucket (non fidarti dell’ordine arrivato) ---
+                    # --- Ordine logico bucket ---
                     ORDER = [
                         "😠 < 5.0 (Arrabbiato)",
                         "😐 5.0-7.5 (Deluso)",
@@ -1046,7 +1046,7 @@ elif page == "🧠 Insight Avanzati":
                         ratio_str = "n/a" if ratio is None else f"{float(ratio):.2f}x"
 
                         with cols[i % len(cols)]:
-                            # metrica principale: delta (più interpretabile)
+                            # metrica principale: delta
                             st.metric(
                                 label=bucket,
                                 value=f"{delta:.1f}",
@@ -1055,10 +1055,10 @@ elif page == "🧠 Insight Avanzati":
                                 help=f"Neg: {neg_len:.0f} parole | Pos: {pos_len:.0f} parole | Ratio: {ratio_str}"
                             )
 
-                            # secondaria: ratio (se disponibile)
+                            # secondaria: ratio 
                             st.caption(f"Ratio (neg/pos): **{ratio_str}**")
 
-                            # presenza testo (se disponibile)
+                            # presenza testo 
                             pn = getattr(row, "pct_has_negative", None)
                             pp = getattr(row, "pct_has_positive", None)
                             if pn is not None and pp is not None:
@@ -1066,7 +1066,7 @@ elif page == "🧠 Insight Avanzati":
 
                     st.divider()
 
-                    # --- Grafico serio con Altair (affidabile) ---
+                    # --- Grafico con Altair  ---
                     st.markdown("### 📉 Positive vs Negative: lunghezza media per fascia")
                     st.caption("Confronto tra lunghezza media della parte positiva e negativa (parole).")
 
@@ -1106,7 +1106,7 @@ elif page == "🧠 Insight Avanzati":
 
                     st.divider()
 
-                    # --- Insight robusto (senza iloc[0]/[-1]) ---
+                    # --- Insight ---
                     st.markdown("### 🧠 Insight automatico")
 
                     # Fascia con delta più alto = più sfogo negativo rispetto al positivo
