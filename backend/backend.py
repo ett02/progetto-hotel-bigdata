@@ -7,12 +7,41 @@ os.environ['PYSPARK_PYTHON'] = sys.executable
 os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
 # JDK_JAVA_OPTIONS rimosse perché Java 17 non necessita dei flag per Java 25
 
+# PySpark Core
 from pyspark.sql import SparkSession
+from pyspark.storagelevel import StorageLevel
 
-from pyspark.sql.functions import col, lower, udf, regexp_replace, split, avg, count, to_date, month, when
-from pyspark.ml.feature import Tokenizer, StopWordsRemover, CountVectorizer, IDF, StringIndexer, VectorAssembler
+# PySpark SQL Functions
+from pyspark.sql.functions import (
+    # Basic operations
+    col, lower, when, lit,
+    # String operations
+    concat_ws, trim, regexp_extract, regexp_replace, split, length,
+    # Aggregation functions
+    avg, count, sum as spark_sum, stddev,
+    min as spark_min, max as spark_max,
+    countDistinct, percentile_approx,
+    # Math functions
+    sqrt, round, log1p, rand,
+    # Date functions
+    to_date, month,
+    # Null handling
+    coalesce,
+    # UDF
+    udf
+)
+
+# PySpark ML Features
+from pyspark.ml.feature import (
+    Tokenizer, StopWordsRemover, CountVectorizer, IDF,
+    StringIndexer, VectorAssembler, StandardScaler, RegexTokenizer
+)
+
+# PySpark ML Models
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.clustering import KMeans, LDA
+
+# PySpark ML Pipeline and Evaluation
 from pyspark.ml import Pipeline
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator, ClusteringEvaluator
 
@@ -50,14 +79,14 @@ class GestoreBigData:
         # Caricamento con header e inferenza schema
         df = spark.read.csv(percoso_file, header=True, inferSchema=True)
         
-        # Pulizia: Rimuoviamo righe con valori nulli nelle colonne critiche
+        # Pulizia, Rimuoviamo righe con valori nulli nelle colonne critiche
         df_pulito = df.na.drop(subset=["Hotel_Name", "Review_Date", "Negative_Review", "Positive_Review"])
         
-        # FIX: Alcuni valori numerici sono stringhe 'NA' invece di null
+        #Alcuni valori numerici sono stringhe 'NA' invece di null
         # Usiamo na.replace per sostituirli con None (più sicuro del confronto diretto)
         df_pulito = df_pulito.na.replace("NA", None)
         
-        # Casting colonne numeriche necessario se l'inferenza ha fallito parzialmente
+        #Casting colonne numeriche necessario se l'inferenza ha fallito parzialmente
         df_pulito = df_pulito.withColumn("lat", col("lat").cast("double")) \
                              .withColumn("lng", col("lng").cast("double")) \
                              .withColumn("Average_Score", col("Average_Score").cast("double")) \
@@ -78,16 +107,9 @@ class GestoreBigData:
         Strategia: Usa Reviewer_Score per creare le label
         - Score >= 7.5 → Sentiment Positivo (label=1)
         - Score < 7.5 → Sentiment Negativo (label=0)
-        
-        NUOVO: Restituisce anche statistiche per visualizzazione
         """
-        from pyspark.sql.functions import concat_ws, when
-        from pyspark.ml.feature import Tokenizer, StopWordsRemover, CountVectorizer, IDF
-        from pyspark.ml.classification import LogisticRegression
-        from pyspark.ml import Pipeline
-        from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-        
-        # Prepara i dati: combina le recensioni
+        # Prepara i dati: combina le recensioni concatenando il testo negativo con quello positivo con uno spazzio tra le due per avere un unico campo
+        # su cui fare NLP
         df_prep = df_hotel.withColumn("review", concat_ws(" ", col("Negative_Review"), col("Positive_Review")))
         
         # Crea label: 1 se score >= 7.5 (positivo), 0 altrimenti (negativo)
@@ -96,39 +118,39 @@ class GestoreBigData:
         # Filtra recensioni vuote o troppo corte
         df_prep = df_prep.filter("length(review) > 20")
         
-        # Campiona il 30% dei dati per velocità (opzionale su macchine con poca RAM)
+        # Campiona il 30% dei dati per velocità 
         df_sampled = df_prep.sample(False, 0.3, seed=42)
         
         # Pipeline ML
-        tokenizer = Tokenizer(inputCol="review", outputCol="words")
-        remover = StopWordsRemover(inputCol="words", outputCol="filtered")
-        cv = CountVectorizer(inputCol="filtered", outputCol="rawFeatures", vocabSize=800, minDF=5.0)
-        idf = IDF(inputCol="rawFeatures", outputCol="features")
-        lr = LogisticRegression(maxIter=10, regParam=0.01)
+        tokenizer = Tokenizer(inputCol="review", outputCol="words")#divide le recensioni in liste di parole
+        remover = StopWordsRemover(inputCol="words", outputCol="filtered")#rimuove le stop words ovvero le parole più frequenti e meno significative
+        cv = CountVectorizer(inputCol="filtered", outputCol="rawFeatures", vocabSize=800, minDF=5.0)#crea un vocabolario di 800 parole utilizzando le parole filtrate
+        idf = IDF(inputCol="rawFeatures", outputCol="features")#calcola l'idf ovvero l'importanza di ogni parola, penaliza parole troppo frequenti e valorizza le parole distintive
+        lr = LogisticRegression(maxIter=10, regParam=0.01)#addestra il modello di regressione logistica, il parametro regParam serve per regolarizzare il modello e prevenire l'overfitting
         
-        pipeline = Pipeline(stages=[tokenizer, remover, cv, idf, lr])
+        pipeline = Pipeline(stages=[tokenizer, remover, cv, idf, lr])#crea una pipeline che combina tutti i passaggi in un unico flusso
         
         # Split train/test
-        train_data, test_data = df_sampled.randomSplit([0.8, 0.2], seed=42)
-        train_data.cache()
+        train_data, test_data = df_sampled.randomSplit([0.8, 0.2], seed=42)#divide i dati in training set e test set
+        train_data.cache()#memorizza i dati in cache per velocizzare l'addestramento
         
-        # NUOVO: Conta distribuzione label nel training set
-        train_label_dist = train_data.groupBy("label").count().collect()
-        train_label_counts = {int(row['label']): row['count'] for row in train_label_dist}
+        # Conta distribuzione label nel training set
+        train_label_dist = train_data.groupBy("label").count().collect()#per i due label 0,1 conta quante righe ci sono 
+        train_label_counts = {int(row['label']): row['count'] for row in train_label_dist}#converte i dati in un dizionario es {0: 1000, 1: 2000} per poi visualizzarli
         
         # Addestramento
-        modello = pipeline.fit(train_data)
+        modello = pipeline.fit(train_data)#addestra il modello
         
         # Valutazione sul test set
-        predizioni_test = modello.transform(test_data)
-        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
-        accuracy = evaluator.evaluate(predizioni_test)
+        predizioni_test = modello.transform(test_data)# applica la pipeline al test set
+        evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")#valuta l'accuratezza del modello
+        accuracy = evaluator.evaluate(predizioni_test)#calcola l'accuratezza
         
-        # NUOVO: Conta distribuzione predizioni sul test set
-        test_pred_dist = predizioni_test.groupBy("prediction").count().collect()
+        #Conta distribuzione predizioni sul test set
+        test_pred_dist = predizioni_test.groupBy("prediction").count().collect()# conta le predizioni per i due label 0,1
         test_pred_counts = {int(row['prediction']): row['count'] for row in test_pred_dist}
         
-        # NUOVO: Estrai esempi di recensioni classificate (per debugging/visualizzazione)
+        #Estrai esempi di recensioni classificate (per debugging/visualizzazione)
         esempi = predizioni_test.select("review", "label", "prediction", "probability") \
                                 .limit(10).toPandas()
         
@@ -157,8 +179,6 @@ class GestoreBigData:
         3. Audience Diversity (nazionalità, tipo viaggio)
         4. Problem Indicators (costruzioni, pulizia, staff)
         """
-        from pyspark.sql.functions import length, when, sum as spark_sum, countDistinct
-        
         # Group by Hotel_Name per aggregare tutte le recensioni
         df_features = df_hotel.groupBy("Hotel_Name", "lat", "lng") \
             .agg(
@@ -173,7 +193,7 @@ class GestoreBigData:
                 (spark_sum(when(col("Reviewer_Score") < 6, 1).otherwise(0)) / count("*") * 100).alias("perc_negative"),
                 
                 # === 2. SENTIMENT BALANCE ===
-                # Ratio lunghezza media positive vs negative
+                # Ratio lunghezza media positive vs lunghezza media negative
                 (avg(length(col("Positive_Review"))) / (avg(length(col("Negative_Review"))) + 1)).alias("ratio_pos_neg"),
                 
                 # Lunghezza media totale recensioni
@@ -193,14 +213,12 @@ class GestoreBigData:
                 # % recensioni con menzioni staff
                 (spark_sum(when(col("Negative_Review").rlike("(?i)staff|service|reception|rude"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_staff")
             )
-        
         return df_features
     
     def esegui_clustering_hotel(self, df_hotel, k=4):
         """
         K-Means clustering basato su CARATTERISTICHE degli hotel (non geografiche).
         Identifica gruppi significativi: Premium, Budget, Hidden Gems, ecc.
-        
         Args:
             df_hotel: DataFrame con recensioni
             k: numero di cluster
@@ -211,44 +229,43 @@ class GestoreBigData:
             - features_per_cluster: Medie features per ogni cluster
             - cluster_names: Interpretazione cluster
         """
-        from pyspark.ml.feature import VectorAssembler, StandardScaler
+        # Calcola features
+        df_features = self.preprocessing_hotel_features(df_hotel)#dataframe pre processato
         
-        # 1. Calcola features
-        df_features = self.preprocessing_hotel_features(df_hotel)
-        
-        # 2. Seleziona features numeriche per clustering (escludi lat/lng)
+        # Seleziona features numeriche che userò nel clustering (escludi lat/lng)
         feature_cols = [
             "voto_medio", "num_recensioni", "perc_eccellenti", "perc_negative",
             "ratio_pos_neg", "avg_review_length", "num_nazionalita",
             "menzioni_costruzione", "menzioni_pulizia", "menzioni_staff"
         ]
         
-        # 3. Assembla feature vector
-        assembler = VectorAssembler(inputCols=feature_cols, outputCol="features_raw")
-        df_assembled = assembler.transform(df_features)
+        # Assembla feature vector
+        assembler = VectorAssembler(inputCols=feature_cols, outputCol="features_raw") #creo una colonna che è un vettore numerico che rappresenta le features 
+        #esempio  se ho voto medio 8 num recensioni 100 e perc negative 4 mi crea un vettore [8,100,4]
+        df_assembled = assembler.transform(df_features)#aggiungo la colonna features_raw al dataframe
         
-        # 4. Normalizza features (importante per K-Means!)
-        scaler = StandardScaler(inputCol="features_raw", outputCol="features", withMean=True, withStd=True)
+        # Normalizza features poiché Kmeans si basa su distanze euclidee e le features hanno scale diverse
+        scaler = StandardScaler(inputCol="features_raw", outputCol="features", withMean=True, withStd=True)#standar scaler normalizza i dati in modo che abbiano media 0 e deviazione standard 1
         scaler_model = scaler.fit(df_assembled)
         df_scaled = scaler_model.transform(df_assembled)
         
-        # 5. K-Means
-        kmeans = KMeans(k=k, seed=42, maxIter=20, featuresCol="features", predictionCol="cluster")
-        model = kmeans.fit(df_scaled)
-        df_clustered = model.transform(df_scaled)
+        # K-Means
+        kmeans = KMeans(k=k, seed=42, maxIter=20, featuresCol="features", predictionCol="cluster")#creo il modello K-Means
+        model = kmeans.fit(df_scaled)#addestro il modello
+        df_clustered = model.transform(df_scaled)#aggiungo la colonna cluster al dataframe
         
-        # 6. Calcola statistiche per cluster
+        # Calcola statistiche per cluster
         cluster_stats = df_clustered.groupBy("cluster") \
-            .agg(
-                count("*").alias("num_hotel"),
-                avg("voto_medio").alias("avg_voto"),
-                avg("num_recensioni").alias("avg_recensioni"),
-                avg("perc_eccellenti").alias("avg_eccellenti"),
-                avg("menzioni_costruzione").alias("avg_problemi")
+            .agg(                                             #calcolo le statistiche per cluster
+                count("*").alias("num_hotel"),#numero di hotel nel cluster
+                avg("voto_medio").alias("avg_voto"),#voto medio nel cluster
+                avg("num_recensioni").alias("avg_recensioni"),#numero medio di recensioni nel cluster
+                avg("perc_eccellenti").alias("avg_eccellenti"),#percentuale media di recensioni eccellenti nel cluster
+                avg("menzioni_costruzione").alias("avg_problemi")#percentuale media di menzioni di problemi nel cluster
             ) \
             .orderBy("cluster")
         
-        # 7. Interpretazione automatica cluster
+        # Interpretazione automatica cluster
         cluster_interpretations = self._interpreta_cluster(cluster_stats.toPandas())
         
         return {
@@ -260,9 +277,8 @@ class GestoreBigData:
         }
     
     def _interpreta_cluster(self, stats_df):
-        """
-        Assegna nomi interpretativi ai cluster basandosi sulle statistiche.
-        """
+        
+        #Assegna nomi interpretativi ai cluster basandosi sulle statistiche.
         interpretations = {}
         
         for _, row in stats_df.iterrows():
@@ -300,13 +316,6 @@ class GestoreBigData:
         - Calcola una metrica: Jaccard similarity sui top-terms (0..1)
         - Mantiene lo stesso vocabolario/features per rendere il confronto corretto
         """
-        from pyspark.sql.functions import col, length, lower, lit
-        from pyspark.storagelevel import StorageLevel
-
-        from pyspark.ml import Pipeline
-        from pyspark.ml.feature import RegexTokenizer, StopWordsRemover, CountVectorizer
-        from pyspark.ml.clustering import LDA
-
         # Filtro le recensioni negative significative
         df_neg = df_hotel.filter(
             (col("Negative_Review") != "No Negative") & #escludiamo i "No Negative" 
@@ -355,7 +364,7 @@ class GestoreBigData:
         cv_model = feat_model.stages[2]# stages ci restituisce i modelli addestrati, in questo caso il CountVectorizer poiche inseriamo 2
         vocab = cv_model.vocabulary # attributo del CountVectorizer che contiene il vocabolario di parole apprese
 
-        # Helper: estrazione top-terms (lista di liste) da lda_model
+        #estrazione top-terms da lda_model
         def extract_topic_terms(lda_model, vocab, top_terms):
             topics = lda_model.describeTopics(maxTermsPerTopic=top_terms).collect()# describeTopics restituisce i topic in formato
             # DataFrame dal modello LDA passato in input
@@ -367,7 +376,7 @@ class GestoreBigData:
                 # int(i) < len(vocab) controlla che l'indice sia valido
             return out  # list of topics -> list of terms
 
-        # Helper: Jaccard
+        # Jaccard
         def jaccard(a, b): # misura di similarità tra due insiemi, restituisce un valore tra 0 e 1, misura quanto due insiemi si sovrappongono
             sa, sb = set(a), set(b) #convertiamo le liste in insiemi
             if len(sa) == 0 and len(sb) == 0:#se sono vuoti restituiamo 1.0
@@ -376,7 +385,7 @@ class GestoreBigData:
                 return 0.0
             return len(sa.intersection(sb)) / len(sa.union(sb)) # intersezione / unione, misura di similarità tra due insiemi
 
-        # Helper: matching greedy topic-to-topic tra due run
+        # matching greedy topic-to-topic tra due run
         def greedy_match(topics_A, topics_B):
             used = set() # insieme degli indici dei topic già usati
             matches = [] # lista dei match finali
@@ -393,7 +402,7 @@ class GestoreBigData:
                 matches.append((i, best_j, best_sim)) # aggiungiamo il match alla lista dei match
             return matches  # (topicA, topicB, sim)
 
-        # ---------- 4) Fit modello "principale" ----------
+        #Fit modello principale
         lda_main = LDA(k=num_topics, maxIter=20, optimizer="online", seed=42) #creiamo il modello LDA
         lda_model_main = lda_main.fit(df_feat)#addestriamo il modello LDA
 
@@ -405,7 +414,7 @@ class GestoreBigData:
         stability_table = None
         compare_topics = None
 
-        # ---------- 5) Passo 6: stability check (seed diverso) ----------
+        #stability check con seed diverso
         if evaluate_stability:#se evaluate_stability è True, eseguiamo lo stability check
             lda_alt = LDA(k=num_topics, maxIter=20, optimizer="online", seed=99)#creiamo un altro modello LDA con seed diverso
             lda_model_alt = lda_alt.fit(df_feat)#addestriamo il modello LDA
@@ -464,11 +473,6 @@ class GestoreBigData:
         - deviazione standard
         - voto minimo e massimo
         """
-        from pyspark.sql.functions import (
-            avg, count, col, stddev, trim,
-            min as spark_min, max as spark_max, round
-        )
-
         # Pulizia nazionalità rimuove gli spazi -- esempio " Italy " -> "Italy"
         df_n = df_hotel.withColumn(
             "nationality_clean",
@@ -503,10 +507,6 @@ class GestoreBigData:
         - keywords_df: frequenza keyword
         - samples_df: esempi di recensioni negative 
         """
-        from pyspark.sql.functions import (
-            col, avg, count, stddev, lower, regexp_extract, lit, sqrt, round, rand, when
-        )
-
         # 1) Pattern lavori regex
         pattern = r"(?i)\b(construction|renovation|renovating|works|drilling|hammering|building work|jackhammer)\b"
 
@@ -580,11 +580,6 @@ class GestoreBigData:
         Query 3: 'Couple vs Family'.
         MIGLIORAMENTI: Categorie più complete e statistiche aggregate
         """
-        # importiamo le funzioni necessarie 
-        #in particolare lit serve per definire una costante (1.96) che useremo per calcolare l'intervallo di confidenza al 95%
-        #perché lit crea una colonna con un valore costante per tutte le righe
-        from pyspark.sql.functions import when, col, avg, count, stddev, lower, sqrt, round, lit
-        
         df_viaggi = df_hotel.withColumn("tags_lc", lower(col("Tags")))
         # Ordine categorie: Solo / Family / Group / Couple / Other
         #creaiamo un nuovo dataframe con le colonne che ci servono 
@@ -634,8 +629,6 @@ class GestoreBigData:
         - negativity_ratio (solo se avg_positive_length è sufficientemente > 0)
         - % recensioni con testo negativo/positivo presente
         """
-        from pyspark.sql.functions import avg, when, col, lit, count, round
-
         df_bucket = (df_hotel
             #creiamo un nuovo dataframe bucket perché poi ci servirà per l'ordinamento finale
             .withColumn("bucket_id", 
@@ -701,8 +694,6 @@ class GestoreBigData:
         Nota:
         - Evito first(Average_Score) perché non deterministico.
         """
-        from pyspark.sql.functions import stddev, avg, count, col, round
-
         result = (
             df_hotel.groupBy("Hotel_Name")
             .agg(
@@ -740,10 +731,6 @@ class GestoreBigData:
         - Calcola la % di recensioni <= 4.0 per ogni hotel.
         - Filtra quelli con media >= 8.0 ma % disastri > 5%.
         """
-        from pyspark.sql.functions import (
-            avg, count, when, col, round, log1p, percentile_approx
-        )
-
         # 1) Aggregazione per hotel
         result = (
             df_hotel.groupBy("Hotel_Name")
@@ -791,11 +778,6 @@ class GestoreBigData:
         2. Divide in bucket di 'Prestigio' (basato su Average_Score).
         3. Misura quanto spesso le aspettative vengono deluse (Gap < 0) e con che intensità.
         """
-
-        from pyspark.sql.functions import (
-            avg, col, when, count, round, lit, coalesce
-        )
-
         # 1) Calcolo del Gap Realtà - Aspettativa
         df_gap = df_hotel.withColumn("gap", col("Reviewer_Score") - col("Average_Score"))
 
