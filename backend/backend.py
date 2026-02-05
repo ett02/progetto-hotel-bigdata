@@ -47,7 +47,7 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator, ClusteringE
 
 class GestoreBigData:
     """
-    Classe singleton per gestire la sessione Spark e le operazioni di analisi dati.
+    classe singleton per gestire la sessione Spark e le operazioni di analisi dati.
     Mantiene il contesto "semplice e pulito" come richiesto.
     """
     _spark = None
@@ -98,30 +98,28 @@ class GestoreBigData:
 
         return df_pulito
 
-    # ---------------------------------------------------------
-    # ALGORITMO: SENTIMENT ANALYSIS (Logistic Regression)
-    # ---------------------------------------------------------
+    # ALGORITMO: SENTIMENT ANALYSIS Logistic Regression
     def allena_sentiment_hotel(self, df_hotel):
         """
-        Addestra un modello di Sentiment Analysis usando il dataset Hotel stesso.
-        Strategia: Usa Reviewer_Score per creare le label
+        addestra un modello di Sentiment Analysis usando il dataset Hotel stesso.
+        strategia: Usa Reviewer_Score per creare le label
         - Score >= 7.5 → Sentiment Positivo (label=1)
         - Score < 7.5 → Sentiment Negativo (label=0)
         """
-        # Prepara i dati: combina le recensioni concatenando il testo negativo con quello positivo con uno spazzio tra le due per avere un unico campo
+        # prepara i dati: combina le recensioni concatenando il testo negativo con quello positivo con uno spazzio tra le due per avere un unico campo
         # su cui fare NLP
         df_prep = df_hotel.withColumn("review", concat_ws(" ", col("Negative_Review"), col("Positive_Review")))
         
-        # Crea label: 1 se score >= 7.5 (positivo), 0 altrimenti (negativo)
+        # creo il label: 1 se score >= 7.5 (positivo), 0 altrimenti (negativo)
         df_prep = df_prep.withColumn("label", when(col("Reviewer_Score") >= 7.5, 1.0).otherwise(0.0))
         
-        # Filtra recensioni vuote o troppo corte
+        # filtra recensioni vuote o troppo corte
         df_prep = df_prep.filter("length(review) > 20")
         
-        # Campiona il 30% dei dati per velocità 
+        # campiona il 30% dei dati per velocità 
         df_sampled = df_prep.sample(False, 0.3, seed=42)
         
-        # Pipeline ML
+        # pipeline ML
         tokenizer = Tokenizer(inputCol="review", outputCol="words")#divide le recensioni in liste di parole
         remover = StopWordsRemover(inputCol="words", outputCol="filtered")#rimuove le stop words ovvero le parole più frequenti e meno significative
         cv = CountVectorizer(inputCol="filtered", outputCol="rawFeatures", vocabSize=800, minDF=5.0)#crea un vocabolario di 800 parole utilizzando le parole filtrate
@@ -130,31 +128,31 @@ class GestoreBigData:
         
         pipeline = Pipeline(stages=[tokenizer, remover, cv, idf, lr])#crea una pipeline che combina tutti i passaggi in un unico flusso
         
-        # Split train/test
+        # divido i test set e in train set
         train_data, test_data = df_sampled.randomSplit([0.8, 0.2], seed=42)#divide i dati in training set e test set
         train_data.cache()#memorizza i dati in cache per velocizzare l'addestramento
         
-        # Conta distribuzione label nel training set
+        # conto distribuzione label nel training set
         train_label_dist = train_data.groupBy("label").count().collect()#per i due label 0,1 conta quante righe ci sono 
         train_label_counts = {int(row['label']): row['count'] for row in train_label_dist}#converte i dati in un dizionario es {0: 1000, 1: 2000} per poi visualizzarli
         
-        # Addestramento
+        # addestramento
         modello = pipeline.fit(train_data)#addestra il modello
         
-        # Valutazione sul test set
+        # valuto il test set
         predizioni_test = modello.transform(test_data)# applica la pipeline al test set
         evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")#valuta l'accuratezza del modello
         accuracy = evaluator.evaluate(predizioni_test)#calcola l'accuratezza
         
-        #Conta distribuzione predizioni sul test set
+        # conta distribuzione predizioni sul test set
         test_pred_dist = predizioni_test.groupBy("prediction").count().collect()# conta le predizioni per i due label 0,1
         test_pred_counts = {int(row['prediction']): row['count'] for row in test_pred_dist}
         
-        #Estrai esempi di recensioni classificate (per debugging/visualizzazione)
+        # estrai esempi di recensioni classificate (per debugging/visualizzazione)
         esempi = predizioni_test.select("review", "label", "prediction", "probability") \
                                 .limit(10).toPandas()
         
-        # Conta totale recensioni
+        # conta totale recensioni
         total_reviews = df_sampled.count()
         
         # Restituisci modello + statistiche
@@ -167,91 +165,68 @@ class GestoreBigData:
             'total_reviews': total_reviews
         }
 
-    # ---------------------------------------------------------
-    # ALGORITMO: CLUSTERING (K-Means) - FEATURE-BASED
-    # ---------------------------------------------------------
+    # ALGORITMO: CLUSTERING (K-Means) 
     def preprocessing_hotel_features(self, df_hotel):
         """
-        Feature Engineering per clustering intelligente degli hotel.
-        Calcola 4 categorie di features:
-        1. Performance Metrics (voto, popolarità)
-        2. Sentiment Balance (ratio pos/neg)
-        3. Audience Diversity (nazionalità, tipo viaggio)
-        4. Problem Indicators (costruzioni, pulizia, staff)
+        feature engineering per clustering intelligente degli hotel.
+        calcola 4 categorie di features:
+        performance metrics (voto, popolarità)
+        sentiment balance (ratio pos/neg)
+        audience diversity (nazionalità, tipo viaggio)
+        problem indicators (costruzioni, pulizia, staff)
         """
-        # Group by Hotel_Name per aggregare tutte le recensioni
+        # group by Hotel_Name per aggregare tutte le recensioni
         df_features = df_hotel.groupBy("Hotel_Name", "lat", "lng") \
             .agg(
-                # === 1. PERFORMANCE METRICS ===
-                avg("Reviewer_Score").alias("voto_medio"),
-                count("Reviewer_Score").alias("num_recensioni"),
-                
-                # % recensioni eccellenti (score >= 9)
-                (spark_sum(when(col("Reviewer_Score") >= 9, 1).otherwise(0)) / count("*") * 100).alias("perc_eccellenti"),
-                
-                # % recensioni negative (score < 6)
-                (spark_sum(when(col("Reviewer_Score") < 6, 1).otherwise(0)) / count("*") * 100).alias("perc_negative"),
-                
-                # === 2. SENTIMENT BALANCE ===
-                # Ratio lunghezza media positive vs lunghezza media negative
-                (avg(length(col("Positive_Review"))) / (avg(length(col("Negative_Review"))) + 1)).alias("ratio_pos_neg"),
-                
-                # Lunghezza media totale recensioni
-                avg(length(col("Positive_Review")) + length(col("Negative_Review"))).alias("avg_review_length"),
-                
-                # === 3. AUDIENCE DIVERSITY ===
-                # Numero nazionalità distinte
-                countDistinct("Reviewer_Nationality").alias("num_nazionalita"),
-                
-                # === 4. PROBLEM INDICATORS ===
-                # % recensioni con menzioni costruzione
-                (spark_sum(when(col("Negative_Review").rlike("(?i)construction|renovation|works|noise"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_costruzione"),
-                
-                # % recensioni con menzioni pulizia
-                (spark_sum(when(col("Negative_Review").rlike("(?i)dirty|clean|hygiene"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_pulizia"),
-                
-                # % recensioni con menzioni staff
-                (spark_sum(when(col("Negative_Review").rlike("(?i)staff|service|reception|rude"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_staff")
+                avg("Reviewer_Score").alias("voto_medio"),#voto medio
+                count("Reviewer_Score").alias("num_recensioni"),#numero recensioni
+                (spark_sum(when(col("Reviewer_Score") >= 9, 1).otherwise(0)) / count("*") * 100).alias("perc_eccellenti"),# % recensioni eccellenti (score >= 9)
+                (spark_sum(when(col("Reviewer_Score") < 6, 1).otherwise(0)) / count("*") * 100).alias("perc_negative"),# % recensioni negative (score < 6) 
+                (avg(length(col("Positive_Review"))) / (avg(length(col("Negative_Review"))) + 1)).alias("ratio_pos_neg"),# Ratio lunghezza media positive vs lunghezza media negative
+                avg(length(col("Positive_Review")) + length(col("Negative_Review"))).alias("avg_review_length"),# Lunghezza media totale recensioni
+                countDistinct("Reviewer_Nationality").alias("num_nazionalita"),# Numero nazionalità distinte
+                (spark_sum(when(col("Negative_Review").rlike("(?i)construction|renovation|works|noise"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_costruzione"),# % recensioni con menzioni costruzione
+                (spark_sum(when(col("Negative_Review").rlike("(?i)dirty|clean|hygiene"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_pulizia"),# % recensioni con menzioni pulizia
+                (spark_sum(when(col("Negative_Review").rlike("(?i)staff|service|reception|rude"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_staff")# % recensioni con menzioni staff
             )
         return df_features
     
     def esegui_clustering_hotel(self, df_hotel, k=4):
         """
         K-Means clustering basato su CARATTERISTICHE degli hotel (non geografiche).
-        Identifica gruppi significativi: Premium, Budget, Hidden Gems, ecc.
+        identifica gruppi significativi: Premium, Budget, Hidden Gems, ecc.
         Args:
             df_hotel: DataFrame con recensioni
             k: numero di cluster
-            
-        Returns:
+        returns:
             dict con:
             - df_clustered: Hotel con cluster assignment
             - features_per_cluster: Medie features per ogni cluster
             - cluster_names: Interpretazione cluster
         """
-        # Calcola features
+        # calcola features chioamando la funzione definita precedentemente per procesare i dati
         df_features = self.preprocessing_hotel_features(df_hotel)#dataframe pre processato
         
-        # Seleziona features numeriche che userò nel clustering (escludi lat/lng)
+        # seleziona features numeriche che userò nel clustering (escludi lat/lng)
         feature_cols = [
             "voto_medio", "num_recensioni", "perc_eccellenti", "perc_negative",
             "ratio_pos_neg", "avg_review_length", "num_nazionalita",
             "menzioni_costruzione", "menzioni_pulizia", "menzioni_staff"
         ]
         
-        # Assembla feature vector
+        # assembla feature vector
         assembler = VectorAssembler(inputCols=feature_cols, outputCol="features_raw") #creo una colonna che è un vettore numerico che rappresenta le features 
         #esempio  se ho voto medio 8 num recensioni 100 e perc negative 4 mi crea un vettore [8,100,4]
         df_assembled = assembler.transform(df_features)#aggiungo la colonna features_raw al dataframe
         
-        # Normalizza features poiché Kmeans si basa su distanze euclidee e le features hanno scale diverse
+        # normalizza features poiché Kmeans si basa su distanze euclidee e le features hanno scale diverse
         scaler = StandardScaler(inputCol="features_raw", outputCol="features", withMean=True, withStd=True)#standar scaler normalizza i dati in modo che abbiano media 0 e deviazione standard 1
-        scaler_model = scaler.fit(df_assembled)
-        df_scaled = scaler_model.transform(df_assembled)
+        scaler_model = scaler.fit(df_assembled)#fittiamo lo scaler su dataframe
+        df_scaled = scaler_model.transform(df_assembled)#applico lo scaler al dataframe così da avere features normalizzate
         
         # K-Means
         kmeans = KMeans(k=k, seed=42, maxIter=20, featuresCol="features", predictionCol="cluster")#creo il modello K-Means
-        model = kmeans.fit(df_scaled)#addestro il modello
+        model = kmeans.fit(df_scaled)#fittiamo il modello K-Means sui dati normalizzati
         df_clustered = model.transform(df_scaled)#aggiungo la colonna cluster al dataframe
         
         # Calcola statistiche per cluster
@@ -277,8 +252,7 @@ class GestoreBigData:
         }
     
     def _interpreta_cluster(self, stats_df):
-        
-        #Assegna nomi interpretativi ai cluster basandosi sulle statistiche.
+        #assegna nomi interpretativi ai cluster basandosi sulle statistiche, per renderlo più leggibile
         interpretations = {}
         
         for _, row in stats_df.iterrows():
@@ -288,7 +262,7 @@ class GestoreBigData:
             eccellenti = row['avg_eccellenti']
             problemi = row['avg_problemi']
             
-            # Logica interpretativa
+            # logica interpretativa
             if voto >= 8.5 and recensioni > 500:
                 nome = "🏆 Premium Hotels"
             elif voto >= 8.0 and recensioni < 200:
@@ -299,14 +273,10 @@ class GestoreBigData:
                 nome = "🌟 Popular Mixed"
             else:
                 nome = f"📊 Cluster {cluster_id}"
-            
             interpretations[cluster_id] = nome
-        
         return interpretations
 
-    # ---------------------------------------------------------
-    # 3. ALGORITMO: TOPIC MODELING (LDA)
-    # ---------------------------------------------------------
+    # ALGORITMO: TOPIC MODELING (LDA)
     def esegui_topic_modeling(self, df_hotel, num_topics=3, evaluate_stability=True, top_terms=10):
         """
         Estrae topic latenti dalle recensioni NEGATIVE usando LDA.
@@ -459,21 +429,19 @@ class GestoreBigData:
             "compare_topics": compare_topics
         }
 
-    # ---------------------------------------------------------
-    # 4. QUERY AVANZATE (Nuove richieste)
-    # ---------------------------------------------------------
+    # QUERY
     def query_nazionalita_critiche(self, df_hotel, min_reviews=100):
         """
-        Query 1: 'The Grumpy Tourist'.
-        Analizza quali nazionalità tendono a dare voti mediamente più bassi o più alti.
+        query : 'The Grumpy Tourist'.
+        analizza quali nazionalità tendono a dare voti mediamente più bassi o più alti.
 
-        Statistiche:
+        statistiche:
         - voto medio
         - numero recensioni
         - deviazione standard
         - voto minimo e massimo
         """
-        # Pulizia nazionalità rimuove gli spazi -- esempio " Italy " -> "Italy"
+        # pulizia nazionalità rimuove gli spazi -- esempio " Italy " -> "Italy"
         df_n = df_hotel.withColumn(
             "nationality_clean",
             trim(col("Reviewer_Nationality"))
@@ -499,15 +467,14 @@ class GestoreBigData:
 
     def query_impatto_costruzioni(self, df_hotel, sample_size=5):
         """
-        Query 2: 'Lavori in corso'.
-        Analizza l'impatto dei lavori in corso sul voto dell'utente.
-
-        Output:
+        query: 'Lavori in corso'.
+        analizza l'impatto dei lavori in corso sul voto dell'utente.
+        output:
         - stats_df: statistiche per has_construction
         - keywords_df: frequenza keyword
         - samples_df: esempi di recensioni negative 
         """
-        # 1) Pattern lavori regex
+        # pattern lavori con una regex
         pattern = r"(?i)\b(construction|renovation|renovating|works|drilling|hammering|building work|jackhammer)\b"
 
         #costruiamo il nuovo dataframe con le colonne che ci servono
@@ -522,46 +489,36 @@ class GestoreBigData:
             .withColumn("kw_main", regexp_extract(col("Negative_Review"), pattern, 1))
         )
 
-        # 2) Statistiche aggregate
+        # statistiche aggregate
         stats_df = (
             # raggruppa per has_construction
             df_c.groupBy("has_construction")
-            .agg(
-                # calcola il voto medio
-                avg("Reviewer_Score").alias("voto_medio"),
-                # conta il numero di recensioni
-                count("*").alias("totale"),
-                # calcola la deviazione standard
-                stddev("Reviewer_Score").alias("deviazione_std")
+            .agg(#ci serviranno per calcolare l'intervallo di confidenza
+                avg("Reviewer_Score").alias("voto_medio"),# calcola il voto medio
+                count("*").alias("totale"),# conta il numero di recensioni
+                stddev("Reviewer_Score").alias("deviazione_std")# calcola la deviazione standard
             )
-            # calcola l'errore standard così da quantificare l'incertezza della media stimata
-            .withColumn("se", col("deviazione_std") / sqrt(col("totale")))
-            # calcola l'intervallo di confidenza al 95% in modo da stimare un range di valori plausibili per il vero voto medio della popolazione   
-            .withColumn("ci95", lit(1.96) * col("se"))
+            
+            .withColumn("se", col("deviazione_std") / sqrt(col("totale")))# calcola l'errore standard così da quantificare l'incertezza della media stimata   
+            .withColumn("ci95", lit(1.96) * col("se"))# calcola l'intervallo di confidenza al 95% in modo da stimare un range di valori plausibili per il vero voto medio della popolazione
 
             # blocco di arrotondamento voti medi, dev stand, e ci95 a 3 decimali
             .withColumn("voto_medio", round(col("voto_medio"), 3))
             .withColumn("deviazione_std", round(col("deviazione_std"), 3))
             .withColumn("ci95", round(col("ci95"), 3))
-            # elimina la colonna se
-            .drop("se")
-            # ordina per has_construction
-            .orderBy("has_construction")
+            .drop("se")#elimino la colonna se
+            .orderBy("has_construction")#ordiniamo per has_construction
         )
 
-        # 3) Frequenza keyword principali 
+        # frequenza keyword principali 
         keywords_df = (
-            # filtra solo le recensioni con lavori
-            df_c.filter(col("has_construction") == True)
-            # raggruppa per keyword principale
-            .groupBy("kw_main")
-            # conta il numero di recensioni per keyword
-            .agg(count("*").alias("freq"))
-            # ordina per frequenza decrescente
-            .orderBy(col("freq").desc())
+            df_c.filter(col("has_construction") == True) # filtra solo le recensioni con lavori
+            .groupBy("kw_main")# raggruppa per keyword principale
+            .agg(count("*").alias("freq"))# conta il numero di recensioni per keyword così da trovare la frequenza per la parola 
+            .orderBy(col("freq").desc())# ordina per frequenza decrescente
         )
 
-        # 4) Campioni casuali di recensioni con lavori
+        # campioni casuali di recensioni con lavori
         samples_df = (
             df_c.filter(col("has_construction") == True)
             .select("Hotel_Name", "Reviewer_Score", "Negative_Review", "kw_main")
@@ -577,11 +534,11 @@ class GestoreBigData:
 
     def query_coppie_vs_famiglie(self, df_hotel):
         """
-        Query 3: 'Couple vs Family'.
-        MIGLIORAMENTI: Categorie più complete e statistiche aggregate
+        query : 'Couple vs Family'.
+        miglioramenti: categorie più complete e statistiche aggregate
         """
         df_viaggi = df_hotel.withColumn("tags_lc", lower(col("Tags")))
-        # Ordine categorie: Solo / Family / Group / Couple / Other
+        #ordine categorie: Solo / Family / Group / Couple / Other
         #creaiamo un nuovo dataframe con le colonne che ci servono 
         df_viaggi = df_viaggi.withColumn(
             "tipo_viaggio",
@@ -591,7 +548,6 @@ class GestoreBigData:
             .when(col("tags_lc").contains("couple"), "👫 Coppia")
             .otherwise("❓ Altro")
         )
-        
         agg = (
             df_viaggi.groupBy("tipo_viaggio")
             .agg(
@@ -605,11 +561,11 @@ class GestoreBigData:
             #filtriamo le categorie con meno di 50 recensioni
             .filter(col("num_recensioni") > 50)
         )
-        # CI 95% circa: mean ± 1.96 * (std/sqrt(n))
+        # CI 95% circa: mean ± 1.96 * (std/sqrt(n)), siamo sicuri al 95% che il voto medio è tra mean ± 1.96 * (std/sqrt(n))
         agg = agg.withColumn("se", col("deviazione_std") / sqrt(col("num_recensioni")))
         agg = agg.withColumn("ci95", lit(1.96) * col("se"))
 
-        # Pulizia output arrotondamento a 3 decimali e ordinamento per voto medio decrescente
+        # pulizia output arrotondamento a 3 decimali e ordinamento per voto medio decrescente
         agg = (
             agg.withColumn("voto_medio", round(col("voto_medio"), 3))
             .withColumn("deviazione_std", round(col("deviazione_std"), 3))
@@ -620,13 +576,12 @@ class GestoreBigData:
 
     def query_lunghezza_recensioni(self, df_hotel):
         """
-        Query 4: 'Asimmetria Emotiva' (Emotional Asymmetry).
-        Analizza se la delusione genera più testo della soddisfazione.
-
-        Output per bucket di score:
-        - lunghezze medie (neg/pos)
-        - differenza (neg - pos)
-        - negativity_ratio (solo se avg_positive_length è sufficientemente > 0)
+        query : 'Asimmetria Emotiva' (Emotional Asymmetry).
+        analizza se la delusione genera più testo della soddisfazione.
+        output per bucket di score:
+        - lunghezze medie neg/pos
+        - differenza neg - pos
+        - negativity_ratio solo se avg_positive_length è sufficientemente > 0
         - % recensioni con testo negativo/positivo presente
         """
         df_bucket = (df_hotel
@@ -645,7 +600,6 @@ class GestoreBigData:
                 .otherwise("😍 > 9.0 (Felice)")
             )
         )
-
         agg = (
             df_bucket.groupBy("bucket_id", "score_bucket")
             .agg(
@@ -653,7 +607,6 @@ class GestoreBigData:
                 avg("Review_Total_Negative_Word_Counts").alias("avg_negative_length"),
                 #lunghezza media recensioni positive grazie alle colonne già presenti nel dataframe
                 avg("Review_Total_Positive_Word_Counts").alias("avg_positive_length"),
-
                 # % review con testo presente (proxy: word_count > 0)
                 #calcoliamo il numero di recensioni con testo negativo nel seguente modo: 
                 #contiamo il numero di recensioni con testo negativo e dividiamo per il numero totale di recensioni e moltiplichiamo per 100 perché vogliamo una percentuale
@@ -661,18 +614,14 @@ class GestoreBigData:
                 #calcoliamo il numero di recensioni con testo positivo nel seguente modo: 
                 #contiamo il numero di recensioni con testo positivo e dividiamo per il numero totale di recensioni e moltiplichiamo per 100 perché vogliamo una percentuale
                 (count(when(col("Review_Total_Positive_Word_Counts") > 0, 1)) / count("*") * 100).alias("pct_has_positive"),
-
                 count("*").alias("num_reviews")
             )
         )
-
-        # Differenza tra lunghezza media recensioni negative e positive
+        # differenza tra lunghezza media recensioni negative e positive
         agg = agg.withColumn("delta_len_neg_minus_pos", col("avg_negative_length") - col("avg_positive_length"))
-
-        # Ratio solo se il denominatore è “abbastanza grande” ovvero selezioniamo un valore maggiore o uguale a 3 per le parole positive così da evitare valori insensati 
+        # ratio solo se il denominatore è “abbastanza grande” ovvero selezioniamo un valore maggiore o uguale a 3 per le parole positive così da evitare valori insensati 
         agg = agg.withColumn("negativity_ratio", when(col("avg_positive_length") >= 3.0, col("avg_negative_length") / col("avg_positive_length")).otherwise(lit(None)))
-
-        # Arrotondamenti risultati per l'interfaccia grafica
+        # arrotondamenti risultati per l'interfaccia grafica
         result = (
             agg.withColumn("avg_negative_length", round(col("avg_negative_length"), 2))
             .withColumn("avg_positive_length", round(col("avg_positive_length"), 2))
@@ -683,16 +632,12 @@ class GestoreBigData:
             .orderBy("bucket_id")
             .drop("bucket_id")
         )
-
         return result
 
     def query_affidabilita_voto(self, df_hotel):
         """
-        Query 5: 'Affidabilità del Voto' (Data Consistency).
-        Misura la deviazione standard dei voti per capire se il punteggio medio è rappresentativo.
-
-        Nota:
-        - Evito first(Average_Score) perché non deterministico.
+        query : 'Affidabilità del Voto' (Data Consistency).
+        misura la deviazione standard dei voti per capire se il punteggio medio è rappresentativo.
         """
         result = (
             df_hotel.groupBy("Hotel_Name")
@@ -705,13 +650,10 @@ class GestoreBigData:
             )
             .filter(col("num_reviews") >= 100)
         )
-
-        # CV = std/mean (utile per confrontare hotel con medie diverse)
-        #cv_score è un coefficiente di variazione che ci permette di confrontare hotel con medie diverse
-        result = result.withColumn("cv_score", round(col("stddev_reviewer_score") / col("mean_reviewer_score"), 4))
-        #Il coefficiente di variazione viene arrotondato a quattro decimali per preservare una sufficiente granularità nei confronti tra hotel,
+        #cv_score=std/mean, è un coefficiente di variazione che ci permette di confrontare hotel con medie diverse
+        result = result.withColumn("cv_score", round(col("stddev_reviewer_score") / col("mean_reviewer_score"), 4))#arrotondiamo a 4 decimali
+        #per preservare una sufficiente granularità nei confronti tra hotel,
         #evitando allo stesso tempo una rappresentazione numerica eccessivamente dettagliata.
-
         # pulizia output
         result = (
             result.withColumn("avg_hotel_score", round(col("avg_hotel_score"), 2))
@@ -719,19 +661,18 @@ class GestoreBigData:
                 .withColumn("stddev_reviewer_score", round(col("stddev_reviewer_score"), 2))
                 .orderBy(col("stddev_reviewer_score").desc())
         )
-
         return result
 
     def query_hotel_rischiosi(self, df_hotel):
         """
-        Query 6: 'Hotel Rischiosi' (High Risk, High Reward?).
-        Individua hotel con media alta (>8) ma con una percentuale preoccupante di recensioni disastrose (<=4).
-        
-        Logica:
-        - Calcola la % di recensioni <= 4.0 per ogni hotel.
-        - Filtra quelli con media >= 8.0 ma % disastri > 5%.
+        query: 'Hotel Rischiosi' (High Risk, High Reward?).
+        individua hotel con media alta (>8) ma con una percentuale preoccupante di recensioni disastrose (<=4).
+
+        logica: 
+        - calcola la % di recensioni <= 4.0 per ogni hotel.
+        - filtra quelli con media >= 8.0 ma % disastri > 5%.
         """
-        # 1) Aggregazione per hotel
+        # aggregazione per hotel
         result = (
             df_hotel.groupBy("Hotel_Name")
             .agg(
@@ -743,23 +684,22 @@ class GestoreBigData:
             )
         )
 
-        # 2) Percentuale disastri
+        # percentuale disastri
         result = result.withColumn(
             "disaster_pct",
             round((col("disaster_count") / col("total_reviews")) * 100, 2)#percentuale di recensioni con voto <= 4.0
         )
 
-        # 3) Indice rischio (ranking più solido)
+        # indice rischio (ranking più solido)
         result = result.withColumn(
-            "risk_index",
-            #utilizo log1p per penalizzare gli hotel con poche recensioni, in modo che un hotel con 100 recensioni e il 10% di disastri sia penalizzato di più di un hotel con 1000 recensioni e il 10% di disastri
-            round(col("disaster_pct") * log1p(col("total_reviews")), 2)
+            "risk_index", #utilizo log1p per penalizzare gli hotel con poche recensioni, in modo che un hotel con 100 recensioni e il 10% di disastri sia penalizzato di più di un hotel con 1000 recensioni e il 10% di disastri
+            round(col("disaster_pct") * log1p(col("total_reviews")), 2)#log1p=log(1+x) 
         )
 
-        # 4) Filtri: significatività + “apparenza ottima” + rischio
+        # filtri: significatività + apparenza ottima + rischio
         result = (
             result.filter(
-                (col("total_reviews") >= 50) &
+                (col("total_reviews") >= 50) &           # limite minimo di recensioni per fare pulizia
                 (col("avg_hotel_score") >= 8.0) &        # hotel che sembrano ottimi
                 (col("disaster_pct") >= 5.0)             # hotel che hanno un tasso di recensioni con voto <= 4.0 maggiore del 5%
             )
@@ -770,18 +710,17 @@ class GestoreBigData:
 
     def query_expectation_gap(self, df_hotel):
         """
-        Query 7: 'Expectation Gap' Analysis.
-        Analizza la differenza tra Aspettativa (Average_Score) e Realtà (Reviewer_Score).
-
-        Logica:
-        1. Calcola il Gap = Reviewer_Score - Average_Score per ogni recensione.
-        2. Divide in bucket di 'Prestigio' (basato su Average_Score).
-        3. Misura quanto spesso le aspettative vengono deluse (Gap < 0) e con che intensità.
+        query: 'Expectation Gap' Analysis.
+        analizza la differenza tra Aspettativa Average_Score e Realtà Reviewer_Score.
+        logica:
+        1. calcola il gap = Reviewer_Score - Average_Score per ogni recensione.
+        2. divide in bucket di 'Prestigio' (basato su Average_Score). es: standard, premium, luxury
+        3. misura quanto spesso le aspettative vengono deluse (Gap < 0) e con che intensità.
         """
-        # 1) Calcolo del Gap Realtà - Aspettativa
-        df_gap = df_hotel.withColumn("gap", col("Reviewer_Score") - col("Average_Score"))
+        # calcolo del gap Realtà - Aspettativa
+        df_gap = df_hotel.withColumn("gap", col("Reviewer_Score") - col("Average_Score"))# creaiamo una nuova colonna gap
 
-        # 2) Bucket di Prestigio + bucket_id numerico per ordinamento logico
+        # bucket di prestigio + bucket_id numerico per ordinamento logico
         df_gap = df_gap.withColumn(
             "bucket_id",
             when(col("Average_Score") < 7.5, lit(0))
@@ -796,24 +735,23 @@ class GestoreBigData:
             .otherwise("💎 Luxury (> 9.2)")
         )
 
-        # 3) Aggregazione per Bucket
+        #aggregazione per Bucket
         result = (
             df_gap.groupBy("bucket_id", "expectation_bucket")
             .agg(
                 avg("gap").alias("avg_gap"),
-
-                # Percentuale di Gap Negativi Delusioni poiche e sono negativi vuol dire che le recensioni hanno dato un voto inferiore all'aspettativa
+                # percentuale di gap negativi delusioni poiche e sono negativi vuol dire che le recensioni hanno dato un voto inferiore all'aspettativa
                 (count(when(col("gap") < 0, 1)) / count("*") * 100).alias("pct_delusioni"),#lo mettiamo in percentuale
-                # Intensità media della delusione solo sui gap negativi
+                #intensità media della delusione solo sui gap negativi
                 avg(when(col("gap") < 0, col("gap"))).alias("intensita_delusione_media"),#calcolo quanto in media le recensioni hanno dato un voto inferiore all'aspettativa
                 count("*").alias("num_reviews"),
             )
             .orderBy("bucket_id")#riordino e poi lo tolgo per non farlo vedere nel risultato finale
             .drop("bucket_id")
         )
-        # 4) Pulizia output per visualizzazione
-        #    - round per leggibilità
-        #    - coalesce per evitare null (caso: nessun gap negativo nel bucket)
+        # pulizia output per visualizzazione
+        #     round per leggibilità
+        #     coalesce per evitare null caso: nessun gap negativo nel bucket
         result = (
             result.withColumn("avg_gap", round(col("avg_gap"), 3))
                   .withColumn("pct_delusioni", round(col("pct_delusioni"), 2))

@@ -54,7 +54,6 @@ page = st.sidebar.radio(
 st.sidebar.markdown("---")
 
 
-
 # PAGINA 1: ESPLORAZIONE DATI
 if page == "📊 Esplorazione Dati":
     st.header("📊 Esplorazione Dati")
@@ -723,15 +722,17 @@ elif page == "🧠 Insight Avanzati":
                     left, right = st.columns(2)
 
                     with left:
-                        st.markdown("### 😊 Top 5 più indulgenti (voto medio più alto)")
-                        top5 = df_naz.nlargest(5, "voto_medio")[["nationality_clean", "voto_medio", "num_recensioni", "deviazione_std"]]
-                        top5.columns = ["Nazionalità", "Voto medio", "Recensioni", "σ"]
+                        st.markdown("### 😊 Top 5 - Più Generosi")
+                        # FIX: Usa 'nationality_clean' invece di 'Reviewer_Nationality' per match con backend
+                        top5 = df_naz.nlargest(5, 'voto_medio')[['nationality_clean', 'voto_medio', 'num_recensioni']]
+                        top5.columns = ['Nazionalità', 'Voto Medio', 'Recensioni']
                         st.dataframe(top5, use_container_width=True, hide_index=True)
 
                     with right:
-                        st.markdown("### 😐 Top 5 più severi (voto medio più basso)")
-                        bottom5 = df_naz.nsmallest(5, "voto_medio")[["nationality_clean", "voto_medio", "num_recensioni", "deviazione_std"]]
-                        bottom5.columns = ["Nazionalità", "Voto medio", "Recensioni", "σ"]
+                        st.markdown("### � Top 5 - Più Critici")
+                        # FIX: Usa 'nationality_clean' invece di 'Reviewer_Nationality' per match con backend
+                        bottom5 = df_naz.nsmallest(5, 'voto_medio')[['nationality_clean', 'voto_medio', 'num_recensioni']]
+                        bottom5.columns = ['Nazionalità', 'Voto Medio', 'Recensioni']
                         st.dataframe(bottom5, use_container_width=True, hide_index=True)
 
                     st.divider()
@@ -775,6 +776,7 @@ elif page == "🧠 Insight Avanzati":
 
             if st.button("🚀 Esegui Analisi Lavori", type="primary"):
                 with st.spinner("Cercando recensioni con menzioni di lavori..."):
+                    # FIX: Il backend restituisce un dict, estraiamo 'stats_df' prima di convertire
                     result = gestore.query_impatto_costruzioni(st.session_state.df_hotel, sample_size=sample_size)
 
                 # --- Compatibilità: se backend vecchio ritorna DF, adattiamo ---
