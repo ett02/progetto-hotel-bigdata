@@ -83,6 +83,23 @@ La pipeline usa `CountVectorizer`. Questo richiede un passaggio extra:
 
 ---
 
+## 6. Perché non usiamo `.parallelize()`? (RDD vs DataFrames)
+
+Una domanda comune è perché nel codice non compare mai `sc.parallelize()`.
+
+### Differenza Fondamentale
+*   **`sc.parallelize(data)`**: Fa parte della vecchia API RDD (Resilient Distributed Datasets). Serve quando hai una lista Python **pre-esistente in memoria locale** (es. `list = [1, 2, 3]`) e vuoi distribuirla sugli executor.
+*   **`spark.read.csv(path)`**: Fa parte della moderna API DataFrame/SQL. Legge i file direttamente dal disco in modo distribuito.
+
+### Nel nostro progetto:
+1.  **Lettura Diretta**: Non carichiamo mai tutti i dati in una lista Python prima (sarebbe lentissimo e saturerebbe la RAM). Usiamo `spark.read.csv` che divide il file CSV in blocchi logici e li assegna ai worker automaticamente.
+2.  **Catalyst Optimizer**: Usando i DataFrame, Spark "capisce" la struttura dei dati (schema). Questo gli permette di ottimizzare le query (es. filtrare i dati prima di leggerli tutti) cosa impossibile con gli RDD opachi.
+3.  **Efficienza**: Le operazioni su RDD comportano molta serializzazione/deserializzazione Python-JVM (overhead). I DataFrame usano il motore *Tungsten* che gestisce la memoria in formato binario compatto, bypassando il Garbage Collector di Java e Python.
+
+In sintesi: **Non usiamo `.parallelize()` perché non stiamo distribuendo dati dalla RAM locale, ma stiamo processando dati direttamente dalla sorgente (file) usando l'API di livello più alto e performante.**
+
+---
+
 ## Conclusione
 
 La parallelizzazione in questo progetto è:
