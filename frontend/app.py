@@ -48,7 +48,7 @@ if st.sidebar.button("Carica Dataset"):
 # Sidebar Navigation
 page = st.sidebar.radio(
     "📍 Navigazione",
-    ["📊 Esplorazione Dati", "😊 Sentiment Analysis", "🗺️ Mappa & Clustering", 
+    ["📊 Esplorazione Dati", " Sentiment Analysis", "🗺️ Mappa & Clustering", 
      "📝 Topic Modeling", "🧠 Insight Avanzati"]
 )
 st.sidebar.markdown("---")
@@ -91,12 +91,12 @@ if page == "📊 Esplorazione Dati":
             show_all = st.checkbox("Mostra tutte le colonne", value=False)
         
         if show_all:
-            st.dataframe(st.session_state.df_hotel.limit(1000).toPandas(), use_container_width=True)
+            st.dataframe(st.session_state.df_hotel.limit(200).toPandas(), use_container_width=True)
         else:
             # Mostra solo colonne rilevanti
             columns_to_show = ["Hotel_Name", "Reviewer_Score", "Reviewer_Nationality", "Positive_Review", "Negative_Review"]
             st.dataframe(
-                st.session_state.df_hotel.select(columns_to_show).limit(1000).toPandas(),
+                st.session_state.df_hotel.select(columns_to_show).limit(200).toPandas(),
                 use_container_width=True,
                 height=400
             )
@@ -106,8 +106,8 @@ if page == "📊 Esplorazione Dati":
         st.info("💡 Carica i dati dalla sidebar per iniziare l'esplorazione.")
 
 # PAGINA 2: SENTIMENT ANALYSIS
-elif page == "😊 Sentiment Analysis":
-    st.header("😊 Sentiment Analysis (Logistic Regression)")
+elif page == " Sentiment Analysis":
+    st.header(" Sentiment Analysis (Logistic Regression)")
     st.markdown("""
     Analizziamo il **sentiment** delle recensioni Hotel usando il **Reviewer_Score** come label:
     - **Score ≥ 7.5** → Sentiment Positivo ✅
@@ -141,9 +141,6 @@ elif page == "😊 Sentiment Analysis":
                     with col3:
                         balance_ratio = train_label_counts.get(1, 0) / max(train_label_counts.get(0, 1), 1)
                         st.metric("⚖️ Bilanciamento", f"{balance_ratio:.2f}", help="Ratio Pos/Neg nel training")
-                    
-                    if accuracy >= 0.75:
-                        st.balloons()
                     
                     st.divider()
                     
@@ -978,7 +975,7 @@ elif page == "🧠 Insight Avanzati":
 
                     st.divider()
 
-                    st.markdown("### 🧠 Insight automatico")
+                    st.markdown("### 🧠 Insight")
                     msg = (
                         f"Il target **più soddisfatto** risulta **{best['tipo_viaggio']}** "
                         f"con voto medio **{best['voto_medio']:.2f}**."
@@ -1109,7 +1106,7 @@ elif page == "🧠 Insight Avanzati":
                     st.divider()
 
                     # --- Insight ---
-                    st.markdown("### 🧠 Insight automatico")
+                    st.markdown("### 🧠 Insight")
 
                     # Fascia con delta più alto = più sfogo negativo rispetto al positivo
                     idx_max = df_emo["delta_len_neg_minus_pos"].astype(float).idxmax()
@@ -1434,7 +1431,7 @@ elif page == "🧠 Insight Avanzati":
                         st.altair_chart(chart, use_container_width=True)
 
                 # Insight robusto (senza assumere posizioni)
-                st.markdown("### 🧠 Insight automatico")
+                st.markdown("### 🧠 Insight")
 
                 # Trova fascia più severa (intensità più negativa) e più “morbida”
                 most_severe = df_gap.loc[df_gap["intensita_delusione_media"].idxmin()]
