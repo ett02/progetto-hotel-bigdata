@@ -281,7 +281,6 @@ class GestoreBigData:
         """
         Estrae topic latenti dalle recensioni NEGATIVE usando LDA.
 
-        Upgrade (passo 6):
         - Valuta la stabilità dei topic ripetendo LDA con seed diversi
         - Calcola una metrica: Jaccard similarity sui top-terms (0..1)
         - Mantiene lo stesso vocabolario/features per rendere il confronto corretto
@@ -326,7 +325,7 @@ class GestoreBigData:
             minDF=15 # teniamo termini presenti in almeno 15 recensioni
         )
 
-        # Fissa vocabolario/features UNA sola volta 
+        # Fissa vocabolario/features 
         feat_pipeline = Pipeline(stages=[tokenizer, remover, cv])#pipeline di pre processing per estrarre solo le parole significative
         feat_model = feat_pipeline.fit(df_neg)#addestriamo il pipeline di pre processing 
         df_feat = feat_model.transform(df_neg).select("features")#applichiamo il pipeline di pre processing e teniamo solo le features
@@ -432,7 +431,7 @@ class GestoreBigData:
     # QUERY
     def query_nazionalita_critiche(self, df_hotel, min_reviews=100):
         """
-        query : 'The Grumpy Tourist'.
+        query :
         analizza quali nazionalità tendono a dare voti mediamente più bassi o più alti.
 
         statistiche:
