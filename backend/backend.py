@@ -182,7 +182,7 @@ class GestoreBigData:
                 count("Reviewer_Score").alias("num_recensioni"),#numero recensioni
                 (spark_sum(when(col("Reviewer_Score") >= 9, 1).otherwise(0)) / count("*") * 100).alias("perc_eccellenti"),# % recensioni eccellenti (score >= 9)
                 (spark_sum(when(col("Reviewer_Score") < 6, 1).otherwise(0)) / count("*") * 100).alias("perc_negative"),# % recensioni negative (score < 6) 
-                (avg(length(col("Positive_Review"))) / (avg(length(col("Negative_Review"))) + 1)).alias("ratio_pos_neg"),# Ratio lunghezza media positive vs lunghezza media negative
+                (avg(length(col("Positive_Review"))) / (avg(length(col("Negative_Review"))) + 1)).alias("ratio_pos_neg"),# Ratio lunghezza media positive vs lunghezza media negative il più 1 per evitare divisioni per zero
                 avg(length(col("Positive_Review")) + length(col("Negative_Review"))).alias("avg_review_length"),# Lunghezza media totale recensioni
                 countDistinct("Reviewer_Nationality").alias("num_nazionalita"),# Numero nazionalità distinte
                 (spark_sum(when(col("Negative_Review").rlike("(?i)construction|renovation|works|noise"), 1).otherwise(0)) / count("*") * 100).alias("menzioni_costruzione"),# % recensioni con menzioni costruzione
@@ -236,7 +236,7 @@ class GestoreBigData:
                 avg("voto_medio").alias("avg_voto"),#voto medio nel cluster
                 avg("num_recensioni").alias("avg_recensioni"),#numero medio di recensioni nel cluster
                 avg("perc_eccellenti").alias("avg_eccellenti"),#percentuale media di recensioni eccellenti nel cluster
-                avg("menzioni_costruzione").alias("avg_problemi")#percentuale media di menzioni di problemi nel cluster
+                avg(avg("menzioni_costruzione") + avg("menzioni_pulizia") + avg("menzioni_staff")).alias("avg_problemi")#percentuale media di menzioni di problemi nel cluster
             ) \
             .orderBy("cluster")
         
@@ -334,9 +334,8 @@ class GestoreBigData:
         vocab = cv_model.vocabulary # attributo del CountVectorizer che contiene il vocabolario di parole apprese
 
         #estrazione top-terms da lda_model
-        def extract_topic_terms(lda_model, vocab, top_terms):
-            topics = lda_model.describeTopics(maxTermsPerTopic=top_terms).collect()# describeTopics restituisce i topic in formato
-            # DataFrame dal modello LDA passato in input
+        def extract_topic_terms(lda_model, vocab, top_terms):# come parametri passiamo il modello LDA, il vocabolario e il numero di topic da estrarre
+            topics = lda_model.describeTopics(maxTermsPerTopic=top_terms).collect()# describeTopics restituisce gli indici dei termini più probabili e i relativi pesi
             out = [] # lista di liste che conterrà i top-terms per ogni topic
             for r in topics:#per ogni topic r del DataFrame
                 inds = r["termIndices"] # estraiamo gli indici dei termini
@@ -376,7 +375,7 @@ class GestoreBigData:
         lda_model_main = lda_main.fit(df_feat)#addestriamo il modello LDA
 
         topics_data_main = lda_model_main.describeTopics(maxTermsPerTopic=top_terms)#estraggo i topic dal modello LDA addestrato
-        log_likelihood = float(lda_model_main.logLikelihood(df_feat))#calcolo la log-likelihood
+        log_likelihood = float(lda_model_main.logLikelihood(df_feat))#calcolo la log-likelihood che ci permette di valutare la qualità del modello grazie ad
         log_perplexity = float(lda_model_main.logPerplexity(df_feat))#calcolo la log-perplexity sono utili come indicatori  non come verità assolute
 
         stability = None
@@ -388,12 +387,12 @@ class GestoreBigData:
             lda_alt = LDA(k=num_topics, maxIter=20, optimizer="online", seed=99)#creiamo un altro modello LDA con seed diverso
             lda_model_alt = lda_alt.fit(df_feat)#addestriamo il modello LDA
 
-            terms_main = extract_topic_terms(lda_model_main, vocab, top_terms)#estraggo i topic dal modello main LDA addestrato
-            terms_alt = extract_topic_terms(lda_model_alt, vocab, top_terms)#estraggo i topic dal modello alt LDA addestrato
+            terms_main = extract_topic_terms(lda_model_main, vocab, top_terms)#estraggo i topic dal modello main LDA addestrato principale
+            terms_alt = extract_topic_terms(lda_model_alt, vocab, top_terms)#estraggo i topic dal modello alt LDA addestrato alternativo
 
             matches = greedy_match(terms_main, terms_alt)#trovo i match tra i topic
 
-            # costruisci una tabella con i risultati: per-topic + overall
+            # costruisco una tabella con i risultati: per-topic + overall
             per_topic = []
             for a, b, sim in matches:
                 per_topic.append({
@@ -406,9 +405,9 @@ class GestoreBigData:
 
             overall = sum(x["jaccard"] for x in per_topic) / len(per_topic)#navigo la tabella per righe x e sommo i jaccard 
             #e divido per il numero di topic così ottengo la media di tutti i topic
-
+            #cosi da capire quanto, in media, i topic estratti sono coerenti tra due run di LDA con seed diversi
             stability = float(overall)#preparo i risultato per l'output
-            stability_table = per_topic  # lista di dict pronti per pandas
+            stability_table = per_topic  # lista di dizionari pronti per pandas
             compare_topics = {
                 "seed_main": 42,
                 "seed_alt": 99
