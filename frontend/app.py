@@ -23,7 +23,7 @@ def get_backend():
 gestore = get_backend()
 
 # Titolo e Descrizione
-st.title("🏨 Recensioni Hotel")
+st.title("Recensioni Hotel")
 st.markdown("""
 Questa applicazione utilizza **Apache Spark** per analizzare un dataset di recensioni di hotel. 
 Include algoritmi di Machine Learning per Sentiment Analysis, Clustering e Topic Modeling.
@@ -47,20 +47,20 @@ if st.sidebar.button("Carica Dataset"):
 
 # Sidebar Navigation
 page = st.sidebar.radio(
-    "📍 Navigazione",
-    ["📊 Esplorazione Dati", " Sentiment Analysis", "🗺️ Mappa & Clustering", 
-     "📝 Topic Modeling", "🧠 Insight Avanzati"]
+    "Navigazione",
+    ["Esplorazione Dati", " Sentiment Analysis", "Mappa & Clustering", 
+     "Topic Modeling", "Insight Avanzati"]
 )
 st.sidebar.markdown("---")
 
 
 # PAGINA 1: ESPLORAZIONE DATI
-if page == "📊 Esplorazione Dati":
-    st.header("📊 Esplorazione Dati")
+if page == "Esplorazione Dati":
+    st.header("Esplorazione Dati")
     
     if st.session_state.df_hotel:
         # === SEZIONE 1: STATISTICHE GENERALI ===
-        st.subheader("📈 Statistiche Generali")
+        st.subheader("Statistiche Generali")
         
         # Calcola metriche
         num_hotel = st.session_state.df_hotel.count()
@@ -70,17 +70,17 @@ if page == "📊 Esplorazione Dati":
         # Layout a 3 colonne per metriche
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("📝 Totale Recensioni", f"{num_hotel:,}")
+            st.metric("Totale Recensioni", f"{num_hotel:,}")
         with col2:
-            st.metric("⭐ Punteggio Medio", f"{avg_score:.2f}/10")
+            st.metric("Punteggio Medio", f"{avg_score:.2f}/10")
         with col3:
-            st.metric("🏨 Hotel Unici", f"{num_hotels_unique:,}")
+            st.metric("Hotel Unici", f"{num_hotels_unique:,}")
         
         st.markdown("")  # Spacing
         st.divider()
         
         # === SEZIONE 2: ANTEPRIMA DATASET ===
-        st.subheader("🔍 Anteprima Dataset")
+        st.subheader("Anteprima Dataset")
         st.caption("Visualizzazione delle prime 1000 recensioni")
         
         # Opzioni di visualizzazione
@@ -103,21 +103,21 @@ if page == "📊 Esplorazione Dati":
         
         st.markdown("")  # Spacing
     else:
-        st.info("💡 Carica i dati dalla sidebar per iniziare l'esplorazione.")
+        st.info("Carica i dati dalla sidebar per iniziare l'esplorazione.")
 
 # PAGINA 2: SENTIMENT ANALYSIS
 elif page == " Sentiment Analysis":
     st.header(" Sentiment Analysis (Logistic Regression)")
     st.markdown("""
     Analizziamo il **sentiment** delle recensioni Hotel usando il **Reviewer_Score** come label:
-    - **Score ≥ 7.5** → Sentiment Positivo ✅
-    - **Score < 7.5** → Sentiment Negativo ❌
+    - **Score ≥ 7.5** → Sentiment Positivo
+    - **Score < 7.5** → Sentiment Negativo
     
     Il modello impara a predire il sentiment basandosi sul testo delle recensioni.
     """)
     
     if st.session_state.df_hotel:
-        if st.button("🚀 Addestra Modello Sentiment", type="primary"):
+        if st.button("Addestra Modello Sentiment", type="primary"):
             with st.spinner("Addestramento in corso (può richiedere 1-2 minuti)..."):
                 try:
                     result = gestore.allena_sentiment_hotel(st.session_state.df_hotel)
@@ -130,22 +130,22 @@ elif page == " Sentiment Analysis":
                     esempi = result['esempi_predizioni']
                     total_reviews = result['total_reviews']
                     
-                    st.success(f"✅ Modello addestrato con successo su **{total_reviews:,}** recensioni!")
+                    st.success(f"Modello addestrato con successo su **{total_reviews:,}** recensioni!")
                     
                     # Metriche principali
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("🎯 Accuratezza", f"{accuracy:.2%}")
+                        st.metric("Accuratezza", f"{accuracy:.2%}")
                     with col2:
-                        st.metric("📊 Training Set", f"{sum(train_label_counts.values()):,}")
+                        st.metric("Training Set", f"{sum(train_label_counts.values()):,}")
                     with col3:
                         balance_ratio = train_label_counts.get(1, 0) / max(train_label_counts.get(0, 1), 1)
-                        st.metric("⚖️ Bilanciamento", f"{balance_ratio:.2f}", help="Ratio Pos/Neg nel training")
+                        st.metric("Bilanciamento", f"{balance_ratio:.2f}", help="Ratio Pos/Neg nel training")
                     
                     st.divider()
                     
                     # GRAFICI DI VISUALIZZAZIONE
-                    st.subheader("📊 Visualizzazione Training")
+                    st.subheader("Visualizzazione Training")
                     
                     col1, col2 = st.columns(2)
                     
@@ -158,7 +158,7 @@ elif page == " Sentiment Analysis":
                             'Count': [train_label_counts.get(0, 0), train_label_counts.get(1, 0)]
                         })
                         st.bar_chart(train_df.set_index('Sentiment'), color="#FF6B6B")
-                        st.caption(f"📉 Negativo: {train_label_counts.get(0, 0):,} | 📈 Positivo: {train_label_counts.get(1, 0):,}")
+                        st.caption(f"Negativo: {train_label_counts.get(0, 0):,} | Positivo: {train_label_counts.get(1, 0):,}")
                     
                     # Grafico 2: Distribuzione Predizioni Test
                     with col2:
@@ -168,18 +168,18 @@ elif page == " Sentiment Analysis":
                             'Count': [test_pred_counts.get(0, 0), test_pred_counts.get(1, 0)]
                         })
                         st.bar_chart(test_df.set_index('Sentiment'), color="#4ECDC4")
-                        st.caption(f"📉 Neg: {test_pred_counts.get(0, 0):,} | 📈 Pos: {test_pred_counts.get(1, 0):,}")
+                        st.caption(f"Neg: {test_pred_counts.get(0, 0):,} | Pos: {test_pred_counts.get(1, 0):,}")
                     
                     st.divider()
                     
                     # ESEMPI DI PREDIZIONI
-                    st.subheader("🔍 Esempi di Predizioni")
+                    st.subheader("Esempi di Predizioni")
                     st.caption("Campione di recensioni classificate dal modello")
                     
                     # Formatta esempi per la visualizzazione
                     esempi_formatted = esempi.copy()
-                    esempi_formatted['Label'] = esempi_formatted['label'].apply(lambda x: '✅ Pos' if x == 1 else '❌ Neg')
-                    esempi_formatted['Predizione'] = esempi_formatted['prediction'].apply(lambda x: '✅ Pos' if x == 1 else '❌ Neg')
+                    esempi_formatted['Label'] = esempi_formatted['label'].apply(lambda x: 'Pos' if x == 1 else 'Neg')
+                    esempi_formatted['Predizione'] = esempi_formatted['prediction'].apply(lambda x: 'Pos' if x == 1 else 'Neg')
                     esempi_formatted['Confidence'] = esempi_formatted['probability'].apply(
                         lambda x: f"{max(x):.2%}" if isinstance(x, (list, tuple)) else "N/A"
                     )
@@ -193,24 +193,24 @@ elif page == " Sentiment Analysis":
                     )
                     
                 except Exception as e:
-                    st.error(f"❌ Errore durante l'addestramento: {e}")
+                    st.error(f"Errore durante l'addestramento: {e}")
     else:
         st.info("Carica i dati prima di procedere.")
 
 # PAGINA 3: MAPPA & CLUSTERING
-elif page == "🗺️ Mappa & Clustering":
-    st.header("🗺️ Mappa Geografica & Clustering Intelligente")
+elif page == "Mappa & Clustering":
+    st.header("Mappa Geografica & Clustering Intelligente")
     st.markdown("""
     **Due analisi complementari:**
-    - 📍 **Mappa**: Visualizzazione geografica degli hotel
-    - 🎯 **Clustering**: Gruppi significativi basati su caratteristiche
+    - **Mappa**: Visualizzazione geografica degli hotel
+    - **Clustering**: Gruppi significativi basati su caratteristiche
     """)
     
     if st.session_state.df_hotel:
         # Selezione modalità
         mode = st.radio(
             "Seleziona visualizzazione:",
-            ["📍 Mappa Geografica", "🎯 Clustering Intelligente"],
+            ["Mappa Geografica", "Clustering Intelligente"],
             horizontal=True
         )
         
@@ -218,10 +218,10 @@ elif page == "🗺️ Mappa & Clustering":
         
         # ========= SEZIONE A: MAPPA GEOGRAFICA =========
         if "Mappa" in mode:
-            st.subheader("📍 Distribuzione Geografica Hotels")
+            st.subheader("Distribuzione Geografica Hotels")
             st.markdown("Visualizza tutti gli hotel sulla mappa, colorati in base al voto medio.")
             
-            with st.expander("ℹ️ Come funziona"):
+            with st.expander("Come funziona"):
                 st.markdown("""
                 - Ogni punto rappresenta un hotel
                 - Colori basati su voto medio (più alto = migliore)
@@ -237,7 +237,7 @@ elif page == "🗺️ Mappa & Clustering":
                 min_reviews = st.number_input("Minimo recensioni", 0, 1000, 50,
                                              help="Filtra hotel con poche recensioni")
             
-            if st.button("🗺️ Mostra Mappa", type="primary"):
+            if st.button("Mostra Mappa", type="primary"):
                 with st.spinner("Generando mappa..."):
                     try:
                         # Aggregazione: un punto per hotel
@@ -256,19 +256,19 @@ elif page == "🗺️ Mappa & Clustering":
                         # Metriche
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("🏨 Hotels Visualizzati", len(df_map_data))
+                            st.metric("Hotels Visualizzati", len(df_map_data))
                         with col2:
                             avg_score = df_map_data['voto_medio'].mean()
-                            st.metric("⭐ Voto Medio Globale", f"{avg_score:.2f}")
+                            st.metric("Voto Medio Globale", f"{avg_score:.2f}")
                         with col3:
                             total_reviews = df_map_data['num_recensioni'].sum()
-                            st.metric("📝 Recensioni Totali", f"{total_reviews:,}")
+                            st.metric("Recensioni Totali", f"{total_reviews:,}")
                         
                         # Mappa
                         st.map(df_map_data[['latitude', 'longitude']], size=20)
                         
                         # Top 5 per voto
-                        st.markdown("### 🏆 Top 5 Hotels per Voto")
+                        st.markdown("### Top 5 Hotels per Voto")
                         top5 = df_map_data.nlargest(5, 'voto_medio')[['Hotel_Name', 'voto_medio', 'num_recensioni']]
                         top5.columns = ['Hotel', 'Voto Medio', 'Recensioni']
                         st.dataframe(top5, use_container_width=True, hide_index=True)
@@ -278,11 +278,11 @@ elif page == "🗺️ Mappa & Clustering":
         
         # ========= SEZIONE B: CLUSTERING INTELLIGENTE =========
         else:
-            st.subheader("🎯 Clustering Intelligente degli Hotel")
+            st.subheader("Clustering Intelligente degli Hotel")
             
             # Introduzione semplificata
             st.markdown("""
-            ### 💡 Cosa fa questa analisi?
+            ### Cosa fa questa analisi?
             
             Invece di raggruppare hotel per **posizione geografica** (lat/lon), li raggruppa per **come sono davvero**:
             - Quanto sono buoni (voto, recensioni eccellenti)
@@ -294,29 +294,29 @@ elif page == "🗺️ Mappa & Clustering":
             """)
             
             # Process visualization
-            with st.expander("📋 Come funziona il processo (passo-passo)"):
+            with st.expander("Come funziona il processo (passo-passo)"):
                 st.markdown("""
-                #### Step 1️⃣: Calcolo Features per ogni Hotel
+                #### Step 1: Calcolo Features per ogni Hotel
                 Per ogni hotel, calcoliamo:
-                - 📊 **Performance**: Voto medio, quante recensioni ha, % di voti eccellenti (≥9)
-                - 😊 **Sentiment**: Quanto sono lunghe le recensioni positive vs negative
-                - 🌍 **Diversità**: Quante nazionalità diverse lo recensiscono
-                - ⚠️ **Problemi**: % di recensioni che menzionano costruzioni, sporco, staff scortese
+                - **Performance**: Voto medio, quante recensioni ha, % di voti eccellenti (≥9)
+                - **Sentiment**: Quanto sono lunghe le recensioni positive vs negative
+                - **Diversità**: Quante nazionalità diverse lo recensiscono
+                - **Problemi**: % di recensioni che menzionano costruzioni, sporco, staff scortese
                 
-                #### Step 2️⃣: Normalizzazione
+                #### Step 2: Normalizzazione
                 Trasformiamo tutti i numeri sulla stessa scala (0-1) così nessuna feature domina le altre.
                 
-                #### Step 3️⃣: K-Means Clustering
+                #### Step 3: K-Means Clustering
                 L'algoritmo raggruppa hotel **simili** tra loro basandosi su tutte le features insieme.
                 
-                #### Step 4️⃣: Interpretazione Automatica
+                #### Step 4: Interpretazione Automatica
                 Il sistema analizza ogni gruppo e suggerisce un nome (es. "Premium Hotels" se hanno voto alto e tante recensioni).
                 """)
             
             st.divider()
             
             # Seleziona K con spiegazione
-            st.markdown("### 🔢 Quanti gruppi vuoi trovare?")
+            st.markdown("### Quanti gruppi vuoi trovare?")
             col1, col2 = st.columns([2, 1])
             with col1:
                 k_clusters = st.slider("Numero di Gruppi (K)", 2, 6, 4)
@@ -324,82 +324,82 @@ elif page == "🗺️ Mappa & Clustering":
                 st.info(f"""
                 **Consiglio:**
                 - K=3: Pochi gruppi ben distinti
-                - K=4: **Bilanciato** ✅
+                - K=4: **Bilanciato**
                 - K=5-6: Molti gruppi dettagliati
                 """)
             
-            if st.button("🚀 Avvia Clustering Intelligente", type="primary", use_container_width=True):
-                with st.spinner("⏳ Analisi in corso (può richiedere 30-60 secondi)..."):
+            if st.button("Avvia Clustering Intelligente", type="primary", use_container_width=True):
+                with st.spinner("Analisi in corso (può richiedere 30-60 secondi)..."):
                     
                     # Progress indicators
                     progress_bar = st.progress(0)
                     status_text = st.empty()
                     
                     try:
-                        status_text.text("📊 Step 1/4: Calcolo features per ogni hotel...")
+                        status_text.text("Step 1/4: Calcolo features per ogni hotel...")
                         progress_bar.progress(25)
                         
                         result = gestore.esegui_clustering_hotel(st.session_state.df_hotel, k=k_clusters)
                         
-                        status_text.text("🔢 Step 2/4: Normalizzazione e clustering...")
+                        status_text.text("Step 2/4: Normalizzazione e clustering...")
                         progress_bar.progress(50)
                         
                         df_clustered = result['df_clustered']
                         cluster_stats = result['cluster_stats'].toPandas()
                         cluster_names = result['cluster_names']
                         
-                        status_text.text("📈 Step 3/4: Calcolo statistiche...")
+                        status_text.text("Step 3/4: Calcolo statistiche...")
                         progress_bar.progress(75)
                         
-                        status_text.text("✅ Step 4/4: Generazione visualizzazioni...")
+                        status_text.text("Step 4/4: Generazione visualizzazioni...")
                         progress_bar.progress(100)
                         
                         # Clear progress
                         progress_bar.empty()
                         status_text.empty()
                         
-                        st.success(f"✅ **Completato!** Trovati {len(cluster_stats)} gruppi distinti di hotel.")
+                        st.success(f"**Completato!** Trovati {len(cluster_stats)} gruppi distinti di hotel.")
                         
                         # ===== LEGENDA =====
-                        with st.expander("📖 LEGENDA - Come Leggere i Risultati", expanded=False):
+                        with st.expander("LEGENDA - Come Leggere i Risultati", expanded=False):
                             st.markdown("""
-                            ### 📊 Significato delle Metriche
+                            ### Significato delle Metriche
                             
                             | Metrica | Cosa Significa | Esempio |
                             |---------|---------------|---------|
-                            | **🏨 Hotels** | Quanti hotel ci sono in questo gruppo | 45 hotels |
-                            | **⭐ Voto Medio** | Media dei voti di tutti gli hotel del gruppo | 8.5/10 |
-                            | **📝 Recensioni Avg** | Media di quante recensioni ha ogni hotel | 1200 recensioni/hotel |
-                            | **🌟 % Eccellenti** | % di recensioni con voto ≥ 9/10 (super soddisfatti) | 55% = metà clienti entusiasti |
-                            | **⚠️ % Problemi** | % di recensioni che menzionano costruzioni/lavori | 12% = pochi problemi |
+                            | **Hotels** | Quanti hotel ci sono in questo gruppo | 45 hotels |
+                            | **Voto Medio** | Media dei voti di tutti gli hotel del gruppo | 8.5/10 |
+                            | **Recensioni Avg** | Media di quante recensioni ha ogni hotel | 1200 recensioni/hotel |
+                            | **% Eccellenti** | % di recensioni con voto ≥ 9/10 (super soddisfatti) | 55% = metà clienti entusiasti |
+                            | **% Problemi** | % di recensioni che menzionano costruzioni/lavori | 12% = pochi problemi |
                             
                             ---
                             
-                            ### 🏷️ Significato dei Nomi dei Gruppi
+                            ### Significato dei Nomi dei Gruppi
                             
                             I nomi sono **assegnati automaticamente** dal sistema in base alle caratteristiche:
                             
-                            #### 🏆 Premium Hotels
+                            #### Premium Hotels
                             - **Voto**: ≥ 8.5 (eccellente)
                             - **Recensioni**: > 500 (molto popolari)
                             - **Profilo**: Hotel di lusso consolidati, qualità garantita
                             
-                            #### 💎 Hidden Gems (Tesori Nascosti)
+                            #### Hidden Gems (Tesori Nascosti)
                             - **Voto**: ≥ 8.0 (ottimo)
                             - **Recensioni**: < 200 (poca visibilità)
                             - **Profilo**: Piccoli hotel di qualità, poco conosciuti ma eccellenti
                             
-                            #### 🌟 Popular Mixed
+                            #### Popular Mixed
                             - **Voto**: 7.0-8.4 (medio-buono)
                             - **Recensioni**: > 800 (famosissimi)
                             - **Profilo**: Hotel molto noti ma con opinioni miste (alcuni adorano, altri no)
                             
-                            #### 📉 Budget/Problems
+                            #### Budget/Problems
                             - **Voto**: < 7.0 (basso) OR
                             - **Problemi**: > 15% (molte menzioni negative)
                             - **Profilo**: Hotel economici o con problemi ricorrenti
                             
-                            #### 📊 Cluster X
+                            #### Cluster X
                             - Gruppo che non rientra nelle categorie precedenti
                             - Guarda le metriche per capire il profilo
                             """)
@@ -408,7 +408,7 @@ elif page == "🗺️ Mappa & Clustering":
                         
                         # ===== SEZIONE RISULTATI SEMPLIFICATA =====
                         
-                        st.markdown("## 🏷️ Gruppi Scoperti")
+                        st.markdown("## Gruppi Scoperti")
                         st.caption("Ogni gruppo rappresenta hotel con caratteristiche simili")
                         
                         st.markdown("")  # Spacing
@@ -424,30 +424,30 @@ elif page == "🗺️ Mappa & Clustering":
                             # Metrics in colonne con spacing migliorato
                             col1, col2, col3, col4 = st.columns(4)
                             with col1:
-                                st.metric("🏨 Hotels", int(row['num_hotel']))
+                                st.metric("Hotels", int(row['num_hotel']))
                             with col2:
-                                st.metric("⭐ Voto Medio", f"{row['avg_voto']:.2f}")
+                                st.metric("Voto Medio", f"{row['avg_voto']:.2f}")
                             with col3:
-                                st.metric("📝 Recensioni Avg", f"{row['avg_recensioni']:.0f}")
+                                st.metric("Recensioni Avg", f"{row['avg_recensioni']:.0f}")
                             with col4:
                                 perc_ecc = row['avg_eccellenti']
-                                st.metric("🌟 % Eccellenti", f"{perc_ecc:.1f}%")
+                                st.metric("% Eccellenti", f"{perc_ecc:.1f}%")
                             
                             st.markdown("")  # Spacing
                             
                             # Interpretazione
                             if row['avg_voto'] >= 8.5:
-                                st.success("✨ **Qualità Eccellente** - Hotel di alto livello con ottime recensioni")
+                                st.success("**Qualità Eccellente** - Hotel di alto livello con ottime recensioni")
                             elif row['avg_voto'] >= 7.5:
-                                st.info("👍 **Buona Qualità** - Hotel solidi con feedback positivo")
+                                st.info("**Buona Qualità** - Hotel solidi con feedback positivo")
                             else:
-                                st.warning("⚠️ **Da Migliorare** - Possibili problemi da affrontare")
+                                st.warning("**Da Migliorare** - Possibili problemi da affrontare")
                             
                             st.markdown("")  # Spacing extra
                             st.divider()
                         
                         # Grafico comparativo semplificato
-                        st.markdown("## 📊 Confronto Veloce")
+                        st.markdown("## Confronto Veloce")
                         
                         # Prepara dati per grafico
                         import pandas as pd
@@ -459,15 +459,15 @@ elif page == "🗺️ Mappa & Clustering":
                         
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.markdown("#### ⭐ Voto Medio per Gruppo")
+                            st.markdown("#### Voto Medio per Gruppo")
                             st.bar_chart(chart_data.set_index('Gruppo')['Voto Medio'])
                         
                         with col2:
-                            st.markdown("#### 🏨 Numero Hotel per Gruppo")
+                            st.markdown("#### Numero Hotel per Gruppo")
                             st.bar_chart(chart_data.set_index('Gruppo')['Num Hotels'])
                         
                         # Tabella dettagliata (collapsible)
-                        with st.expander("📋 Vedi Statistiche Dettagliate"):
+                        with st.expander("Vedi Statistiche Dettagliate"):
                             display_stats = cluster_stats.copy()
                             display_stats['Cluster'] = display_stats['cluster'].apply(lambda x: cluster_names.get(int(x), f"Gruppo {x}"))
                             display_stats = display_stats[['Cluster', 'num_hotel', 'avg_voto', 'avg_recensioni', 'avg_eccellenti', 'avg_problemi']]
@@ -476,7 +476,7 @@ elif page == "🗺️ Mappa & Clustering":
                             st.dataframe(display_stats, use_container_width=True, hide_index=True)
                         
                         # Esempi hotel (compatto)
-                        with st.expander("🏆 Vedi Esempi di Hotel per Gruppo"):
+                        with st.expander("Vedi Esempi di Hotel per Gruppo"):
                             df_examples = df_clustered.select("Hotel_Name", "cluster", "voto_medio", "num_recensioni") \
                                 .orderBy("cluster", col("voto_medio").desc()) \
                                 .limit(15) \
@@ -488,34 +488,34 @@ elif page == "🗺️ Mappa & Clustering":
                                 
                                 st.markdown(f"**{nome_cluster}**")
                                 for _, hotel in cluster_hotels.iterrows():
-                                    st.caption(f"• {hotel['Hotel_Name']} - ⭐ {hotel['voto_medio']:.2f} ({hotel['num_recensioni']:.0f} rec)")
+                                    st.caption(f"• {hotel['Hotel_Name']} - {hotel['voto_medio']:.2f} ({hotel['num_recensioni']:.0f} rec)")
                                 st.markdown("")
                         
                     except Exception as e:
-                        st.error(f"❌ Errore durante il clustering: {e}")
-                        with st.expander("🔍 Dettagli Tecnici"):
+                        st.error(f"Errore durante il clustering: {e}")
+                        with st.expander("Dettagli Tecnici"):
                             import traceback
                             st.code(traceback.format_exc())
     else:
-        st.info("💡 Carica i dati dalla sidebar per iniziare.")
+        st.info("Carica i dati dalla sidebar per iniziare.")
 
 # PAGINA 4: TOPIC MODELING
-elif page == "📝 Topic Modeling":
-    st.header("📝 Topic Modeling (LDA)")
+elif page == "Topic Modeling":
+    st.header("Topic Modeling (LDA)")
     st.markdown("""
     Scopri i **temi nascosti** nelle recensioni negative usando **Latent Dirichlet Allocation**. 
     LDA identifica automaticamente gruppi di parole che appaiono frequentemente insieme, rivelando i principali problemi lamentati dai clienti.
     """)
     
     # Spiegazione dettagliata
-    with st.expander("ℹ️ Come funziona l'analisi?"):
+    with st.expander("Come funziona l'analisi?"):
         st.markdown("""
         **Processo di analisi:**
-        1. 📋 **Selezione**: Uso solo recensioni negative con almeno 30 caratteri
-        2. 🧹 **Pulizia**: Rimuovo punteggiatura, simboli (*, -, !, ecc.) e parole comuni ("the", "and", "hotel")
-        3. 🔢 **Vettorizzazione**: Converto il testo in numeri analizzabili
-        4. 🤖 **LDA**: Algoritmo che scopre quali parole tendono ad apparire insieme
-        5. 📊 **Output**: Ogni "topic" è un gruppo di parole correlate che rappresentano un tema comune
+        1. **Selezione**: Uso solo recensioni negative con almeno 30 caratteri
+        2. **Pulizia**: Rimuovo punteggiatura, simboli (*, -, !, ecc.) e parole comuni ("the", "and", "hotel")
+        3. **Vettorizzazione**: Converto il testo in numeri analizzabili
+        4. **LDA**: Algoritmo che scopre quali parole tendono ad apparire insieme
+        5. **Output**: Ogni "topic" è un gruppo di parole correlate che rappresentano un tema comune
         
         **Esempio interpretazione:**
         - Se vedi: `room`, `small`, `bed`, `bathroom` → Problema dimensioni camere
@@ -527,20 +527,20 @@ elif page == "📝 Topic Modeling":
     
     col1, col2 = st.columns([2, 1])
     with col1:
-        num_topics = st.slider("🔢 Numero di Topic da estrarre", 2, 10, 3, help="Più topic = più granularità, ma rischio di sovrapposizione")
+        num_topics = st.slider("Numero di Topic da estrarre", 2, 10, 3, help="Più topic = più granularità, ma rischio di sovrapposizione")
 
         evaluate_stability = st.checkbox(
-            "🧪 Valuta stabilità topic (2 run con seed diversi)",
+            "Valuta stabilità topic (2 run con seed diversi)",
             value=True,
             help="Calcola quanto i topic sono stabili tra due addestramenti LDA. Utile per validare interpretabilità."
         )
 
     with col2:
-        st.metric("🎯 Consigliato", "3-4 topic")
+        st.metric("Consigliato", "3-4 topic")
     
     if "df_hotel" in st.session_state and st.session_state.df_hotel is not None:
-        if st.button("🚀 Estrai Topic dalle Recensioni Negative", type="primary"):
-            with st.spinner("🔍 Analisi LDA in corso..."):
+        if st.button("Estrai Topic dalle Recensioni Negative", type="primary"):
+            with st.spinner("Analisi LDA in corso..."):
                 try:
                     result = gestore.esegui_topic_modeling(st.session_state.df_hotel, num_topics=num_topics, evaluate_stability=evaluate_stability, top_terms=10)
 
@@ -550,28 +550,28 @@ elif page == "📝 Topic Modeling":
                     log_perplexity = float(result["log_perplexity"])
                     log_likelihood = float(result.get("log_likelihood", 0.0))
 
-                    st.success(f"✅ Analisi completata su **{num_reviews:,}** recensioni negative!")
+                    st.success(f"Analisi completata su **{num_reviews:,}** recensioni negative!")
 
                     # Warning se dataset troppo piccolo per LDA stabile
                     if num_reviews < 300:
                         st.warning(
-                            "⚠️ Campione relativamente piccolo per LDA: i topic potrebbero essere meno stabili. "
+                            "Campione relativamente piccolo per LDA: i topic potrebbero essere meno stabili. "
                             "Se possibile, riduci filtri (es. lunghezza minima) o usa meno topic."
                         )
 
                     # Metriche modello
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        st.metric("📊 Recensioni analizzate", f"{num_reviews:,}")
+                        st.metric("Recensioni analizzate", f"{num_reviews:,}")
                     with c2:
-                        st.metric("📉 Log-Perplexity", f"{log_perplexity:.3f}",
+                        st.metric("Log-Perplexity", f"{log_perplexity:.3f}",
                               help="Più basso tende a indicare un modello che si adatta meglio ai dati.")
                     with c3:
-                        st.metric("📈 Log-Likelihood", f"{log_likelihood:.1f}",
+                        st.metric("Log-Likelihood", f"{log_likelihood:.1f}",
                               help="Più alto (meno negativo) indica un fit migliore, a parità di dati e k.")
 
                     if evaluate_stability and result.get("stability") is not None:
-                        st.markdown("### 🧪 Stabilità dei Topic")
+                        st.markdown("### Stabilità dei Topic")
                         stability = float(result["stability"])
                         seeds = result.get("compare_topics", {})
                         seed_main = seeds.get("seed_main", 42)
@@ -588,11 +588,11 @@ elif page == "📝 Topic Modeling":
 
                         # Warning soglie pratiche
                         if stability < 0.35:
-                            st.warning("⚠️ Stabilità bassa: i topic cambiano molto tra run. Prova a ridurre k, aumentare minDF o ripulire stopwords.")
+                            st.warning("Stabilità bassa: i topic cambiano molto tra run. Prova a ridurre k, aumentare minDF o ripulire stopwords.")
                         elif stability < 0.55:
-                            st.info("ℹ️ Stabilità media: topic ragionevoli ma con sovrapposizioni. Puoi migliorare con stopwords di dominio.")
+                            st.info("Stabilità media: topic ragionevoli ma con sovrapposizioni. Puoi migliorare con stopwords di dominio.")
                         else:
-                            st.success("✅ Stabilità buona: i topic sono robusti e interpretabili.")
+                            st.success("Stabilità buona: i topic sono robusti e interpretabili.")
 
                         # Tabella per-topic
                         st.markdown("#### Dettaglio per Topic")
@@ -609,7 +609,7 @@ elif page == "📝 Topic Modeling":
                         )
 
                     st.divider()
-                    st.subheader("🗂️ Topic trovati")
+                    st.subheader("Topic trovati")
                     st.caption("Ogni topic è una distribuzione di parole: qui mostriamo i termini più pesati.")
 
                     # Converti in pandas (pochi topic => sicuro)
@@ -633,7 +633,7 @@ elif page == "📝 Topic Modeling":
                         # Normalizzazione robusta: rispetto al max peso del topic
                         max_w = max(w for _, w in terms_with_weights) or 1.0
 
-                        st.markdown(f"### 📌 Topic {topic_id + 1}")
+                        st.markdown(f"### Topic {topic_id + 1}")
 
                         top_terms = terms_with_weights[:10]  # mostra 10 termini
                         for term, w in top_terms:
@@ -644,17 +644,17 @@ elif page == "📝 Topic Modeling":
                             )
 
                         # Interpretazione suggerita: prime 3 parole
-                        st.caption(f"💡 **Etichetta suggerita**: {', '.join([t[0] for t in top_terms[:3]])}")
+                        st.caption(f"**Etichetta suggerita**: {', '.join([t[0] for t in top_terms[:3]])}")
                     st.divider()
 
                 except Exception as e:
-                    st.error(f"❌ Errore durante l'analisi: {e}")
+                    st.error(f"Errore durante l'analisi: {e}")
     else:
-        st.info("💡 Carica i dati per iniziare l'analisi.")
+        st.info("Carica i dati per iniziare l'analisi.")
 
 # PAGINA 5: INSIGHT AVANZATI
-elif page == "🧠 Insight Avanzati":
-    st.header("🧠 Insight Avanzati")
+elif page == "Insight Avanzati":
+    st.header("Insight Avanzati")
     st.markdown("""
     Analisi avanzate con query Spark personalizzate per scoprire pattern nascosti nei dati.
     """)
@@ -662,11 +662,11 @@ elif page == "🧠 Insight Avanzati":
     if st.session_state.df_hotel:
         # === SELEZIONE QUERY NEL SIDEBAR ===
         st.sidebar.divider()
-        st.sidebar.header("🔍 Configurazione Query")
+        st.sidebar.header("Configurazione Query")
         
         query_type = st.sidebar.selectbox(
             "Tipo di analisi:",
-            ["🌍 Nazionalità", "🏗️ Lavori in Corso", "👥 Tipo Viaggio", "📏 Lunghezza Recensioni", "📉 Affidabilità Voto (Std Dev)", "⚠️ Hotel Rischiosi (Alto Rischio)", "🤯 Expectation Gap (Realtà vs Aspettativa)"],
+            ["Nazionalità", "Lavori in Corso", "Tipo Viaggio", "Lunghezza Recensioni", "Affidabilità Voto (Std Dev)", "Hotel Rischiosi (Alto Rischio)", "Expectation Gap (Realtà vs Aspettativa)"],
             help="Seleziona il tipo di analisi avanzata da eseguire"
         )
         
@@ -675,13 +675,13 @@ elif page == "🧠 Insight Avanzati":
         
         # ========= QUERY 1: NAZIONALITÀ =========
         if "Nazionalità" in query_type:
-            st.subheader("🌍 Analisi per Nazionalità (stile di valutazione)")
+            st.subheader("Analisi per Nazionalità (stile di valutazione)")
             st.markdown("""
             **Obiettivo**: osservare differenze nello **stile di valutazione** (più severo vs più indulgente) tra gruppi di recensori.  
             **Nota**: non misura “qualità degli hotel” ma **tendenza media del voto** per nazionalità, su campioni numericamente significativi.
             """)
 
-            with st.expander("ℹ️ Come funziona"):
+            with st.expander("Come funziona"):
                 st.markdown("""
                 - **Filtro**: solo nazionalità con >100 recensioni (maggiore affidabilità)
                 - **Metriche**: voto medio, deviazione standard (σ), min/max
@@ -690,7 +690,7 @@ elif page == "🧠 Insight Avanzati":
                 - **σ alta** → giudizi più discordanti (love/hate)
                 """)
 
-            if st.button("🚀 Esegui Analisi Nazionalità", type="primary"):
+            if st.button("Esegui Analisi Nazionalità", type="primary"):
                 with st.spinner("Analisi in corso..."):
                     df_naz = gestore.query_nazionalita_critiche(st.session_state.df_hotel).toPandas()
 
@@ -705,13 +705,13 @@ elif page == "🧠 Insight Avanzati":
                     # Metriche generali
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        st.metric("📌 Nazionalità analizzate", f"{len(df_naz)}")
+                        st.metric("Nazionalità analizzate", f"{len(df_naz)}")
                     with c2:
                         std_media = float(df_naz["deviazione_std"].mean())
-                        st.metric("📊 σ media", f"{std_media:.2f}")
+                        st.metric("σ media", f"{std_media:.2f}")
                     with c3:
                         range_voti = float(df_naz["voto_medio"].max() - df_naz["voto_medio"].min())
-                        st.metric("📈 Range voto medio", f"{range_voti:.2f}")
+                        st.metric("Range voto medio", f"{range_voti:.2f}")
 
                     st.divider()
 
@@ -719,14 +719,14 @@ elif page == "🧠 Insight Avanzati":
                     left, right = st.columns(2)
 
                     with left:
-                        st.markdown("### 😊 Top 5 - Più Generosi")
+                        st.markdown("### Top 5 - Più Generosi")
                         # FIX: Usa 'nationality_clean' invece di 'Reviewer_Nationality' per match con backend
                         top5 = df_naz.nlargest(5, 'voto_medio')[['nationality_clean', 'voto_medio', 'num_recensioni']]
                         top5.columns = ['Nazionalità', 'Voto Medio', 'Recensioni']
                         st.dataframe(top5, use_container_width=True, hide_index=True)
 
                     with right:
-                        st.markdown("### � Top 5 - Più Critici")
+                        st.markdown("### Top 5 - Più Critici")
                         # FIX: Usa 'nationality_clean' invece di 'Reviewer_Nationality' per match con backend
                         bottom5 = df_naz.nsmallest(5, 'voto_medio')[['nationality_clean', 'voto_medio', 'num_recensioni']]
                         bottom5.columns = ['Nazionalità', 'Voto Medio', 'Recensioni']
@@ -735,7 +735,7 @@ elif page == "🧠 Insight Avanzati":
                     st.divider()
 
                     # Grafico: top15 + bottom15 espliciti
-                    st.markdown("### 📊 Confronto visivo (15 più severi + 15 più indulgenti)")
+                    st.markdown("### Confronto visivo (15 più severi + 15 più indulgenti)")
                     import pandas as pd
 
                     bottom15 = df_naz.nsmallest(15, "voto_medio")
@@ -753,13 +753,13 @@ elif page == "🧠 Insight Avanzati":
         
         # ========= QUERY 2: COSTRUZIONI =========
         elif "Lavori" in query_type:
-            st.subheader("🏗️ Impatto dei Lavori in Corso")
+            st.subheader("Impatto dei Lavori in Corso")
             st.markdown("""
             **Obiettivo**: stimare quanto le menzioni di ristrutturazioni/costruzioni impattino sul voto.  
             **Metodo**: confronto tra gruppi (con lavori vs senza) + keyword più frequenti + campioni di recensioni.
             """)
 
-            with st.expander("ℹ️ Come funziona"):
+            with st.expander("Come funziona"):
                 st.markdown("""
                 - **Pattern lavori**: construction / renovation / drilling / hammering / works / building work  
                 - **Output**:
@@ -768,10 +768,10 @@ elif page == "🧠 Insight Avanzati":
                 3) Esempi di recensioni reali (campioni)
                 """)
 
-            with st.expander("⚙️ Impostazioni", expanded=False):
+            with st.expander("Impostazioni", expanded=False):
                 sample_size = st.slider("Numero esempi recensioni", 3, 15, 5)
 
-            if st.button("🚀 Esegui Analisi Lavori", type="primary"):
+            if st.button("Esegui Analisi Lavori", type="primary"):
                 with st.spinner("Cercando recensioni con menzioni di lavori..."):
                     # FIX: Il backend restituisce un dict, estraiamo 'stats_df' prima di convertire
                     result = gestore.query_impatto_costruzioni(st.session_state.df_hotel, sample_size=sample_size)
@@ -791,7 +791,7 @@ elif page == "🧠 Insight Avanzati":
                     st.warning("Dati insufficienti per l'analisi.")
                 else:
                     # Label leggibili
-                    stats_pdf["gruppo"] = stats_pdf["has_construction"].map({True: "🏗️ Con lavori", False: "🏨 Senza lavori"})
+                    stats_pdf["gruppo"] = stats_pdf["has_construction"].map({True: "Con lavori", False: "Senza lavori"})
 
                     # Estrai gruppi se presenti
                     row_no = stats_pdf[stats_pdf["has_construction"] == False]
@@ -807,19 +807,19 @@ elif page == "🧠 Insight Avanzati":
                     # KPI
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        st.metric("🏨 Senza lavori (media)", f"{voto_no:.2f}" if voto_no is not None else "n/a",
+                        st.metric("Senza lavori (media)", f"{voto_no:.2f}" if voto_no is not None else "n/a",
                                   help=f"CI95 ± {ci_no:.2f}" if ci_no is not None else None)
                     with c2:
                         if voto_no is not None and voto_yes is not None:
                             diff = voto_yes - voto_no
-                            st.metric("🏗️ Con lavori (media)", f"{voto_yes:.2f}",
+                            st.metric("Con lavori (media)", f"{voto_yes:.2f}",
                                       delta=f"{diff:.2f}" if diff < 0 else f"+{diff:.2f}",
                                       delta_color="inverse" if diff < 0 else "normal",
                                       help=f"CI95 ± {ci_yes:.2f}" if ci_yes is not None else None)
                         else:
-                            st.metric("🏗️ Con lavori (media)", "n/a")
+                            st.metric("Con lavori (media)", "n/a")
                     with c3:
-                        st.metric("📊 Recensioni con lavori", f"{n_yes:,}")
+                        st.metric("Recensioni con lavori", f"{n_yes:,}")
 
                     # Interpretazione “più corretta”
                     if voto_no is not None and voto_yes is not None:
@@ -830,23 +830,23 @@ elif page == "🧠 Insight Avanzati":
                             # se |diff| > somma delle incertezze, è un segnale forte (euristica conservativa)
                             threshold = ci_no + ci_yes
                             if diff < -threshold:
-                                st.error(f"⚠️ **Impatto forte**: differenza **{diff:.2f}** oltre l'incertezza (±{threshold:.2f}).")
+                                st.error(f"**Impatto forte**: differenza **{diff:.2f}** oltre l'incertezza (±{threshold:.2f}).")
                             elif diff < 0:
-                                st.warning(f"🔸 Impatto negativo ma vicino all'incertezza: differenza **{diff:.2f}** (±{threshold:.2f}).")
+                                st.warning(f"Impatto negativo ma vicino all'incertezza: differenza **{diff:.2f}** (±{threshold:.2f}).")
                             else:
-                                st.success("✅ Nessun impatto negativo netto rilevato.")
+                                st.success("Nessun impatto negativo netto rilevato.")
                         else:
                             # fallback: soglie euristiche
                             if diff < -0.3:
-                                st.error(f"⚠️ Impatto significativo: i lavori riducono il voto di **{abs(diff):.2f}** punti.")
+                                st.error(f"Impatto significativo: i lavori riducono il voto di **{abs(diff):.2f}** punti.")
                             elif diff < 0:
-                                st.warning(f"🔸 Impatto moderato: riduzione di **{abs(diff):.2f}** punti.")
+                                st.warning(f"Impatto moderato: riduzione di **{abs(diff):.2f}** punti.")
                             else:
-                                st.success("✅ Nessun impatto negativo rilevato.")
+                                st.success("Nessun impatto negativo rilevato.")
 
                 st.divider()
                 # Grafico: media con (eventuali) error bars CI95
-                st.markdown("### 📈 Confronto visivo")
+                st.markdown("### Confronto visivo")
                 st.caption("Barre = voto medio. Se presente, barre d’errore = CI95.")
 
                 import altair as alt
@@ -878,7 +878,7 @@ elif page == "🧠 Insight Avanzati":
                 # Keyword freq
                 if kw_pdf is not None and len(kw_pdf) > 0:
                     st.divider()
-                    st.markdown("### 🔑 Keyword più frequenti (recensioni con lavori)")
+                    st.markdown("### Keyword più frequenti (recensioni con lavori)")
                     st.caption("Serve a capire quale aspetto dei lavori è più citato (drilling vs renovation vs construction).")
 
                     top_kw = kw_pdf.head(10)
@@ -887,21 +887,21 @@ elif page == "🧠 Insight Avanzati":
                 # Samples
                 if samples_pdf is not None and len(samples_pdf) > 0:
                     st.divider()
-                    st.markdown("### 🧾 Esempi reali di recensioni (campione)")
+                    st.markdown("### Esempi reali di recensioni (campione)")
                     for i, r in samples_pdf.iterrows():
                         with st.expander(f"{r['Hotel_Name']} | score={r['Reviewer_Score']} | kw={r.get('kw_main','')}", expanded=False):
                             st.write(r["Negative_Review"])
         
         # ========= QUERY 3: TIPO VIAGGIO =========
         elif "Tipo Viaggio" in query_type:
-            st.subheader("👥 Analisi per Tipo di Viaggio")
+            st.subheader("Analisi per Tipo di Viaggio")
             st.markdown("""
             **Obiettivo**: capire quale target (coppie, famiglie, solitari, gruppi) è più soddisfatto.  
             **Utilità**: supportare scelte di marketing/servizi in base al segmento più “critico” o più “profittevole”.
             (Nota: qui misuriamo soddisfazione tramite `Reviewer_Score` e consistenza tramite dispersione.)
             """)
 
-            with st.expander("ℹ️ Come funziona"):
+            with st.expander("Come funziona"):
                 st.markdown("""
                 - **Categorie**: Coppia, Famiglia, Solo, Gruppo, Altro  
                 - **Filtro**: solo gruppi con > 50 recensioni  
@@ -911,10 +911,10 @@ elif page == "🧠 Insight Avanzati":
                 - **CI95 (se presente)** ⇒ incertezza della media (più piccolo = stima più affidabile)
                 """)
 
-            with st.expander("⚙️ Impostazioni", expanded=False):
+            with st.expander("Impostazioni", expanded=False):
                 show_table = st.checkbox("Mostra tabella completa", value=True)
 
-            if st.button("🚀 Esegui Analisi Tipo Viaggio", type="primary"):
+            if st.button("Esegui Analisi Tipo Viaggio", type="primary"):
                 with st.spinner("Estraendo tag di viaggio..."):
                     df_viaggi = gestore.query_coppie_vs_famiglie(st.session_state.df_hotel).toPandas()
 
@@ -933,15 +933,15 @@ elif page == "🧠 Insight Avanzati":
                     # KPI cards (layout fisso)
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        st.metric("🏆 Target più soddisfatto", best["tipo_viaggio"])
+                        st.metric("Target più soddisfatto", best["tipo_viaggio"])
                     with c2:
-                        st.metric("⭐ Voto medio (best)", f"{best['voto_medio']:.2f}/10")
+                        st.metric("Voto medio (best)", f"{best['voto_medio']:.2f}/10")
                     with c3:
-                        st.metric("😬 Target meno soddisfatto", worst["tipo_viaggio"])
+                        st.metric("Target meno soddisfatto", worst["tipo_viaggio"])
 
                     st.divider()
 
-                    st.markdown("### 📈 Confronto visivo (media + affidabilità)")
+                    st.markdown("### Confronto visivo (media + affidabilità)")
                     st.caption("Barre = voto medio. Se presente, barre d’errore = CI95 (1.96 * std/sqrt(n)). Tooltip con σ e #recensioni.")
 
                     import altair as alt
@@ -975,26 +975,26 @@ elif page == "🧠 Insight Avanzati":
 
                     st.divider()
 
-                    st.markdown("### 🧠 Insight")
+                    st.markdown("### Insight")
                     msg = (
                         f"Il target **più soddisfatto** risulta **{best['tipo_viaggio']}** "
                         f"con voto medio **{best['voto_medio']:.2f}**."
                     )
                     if "ci95" in df_viaggi.columns and not pd.isna(best.get("ci95", None)):
                         msg += f" (CI95 ± {best['ci95']:.2f})"
-                    st.success("🏆 " + msg)
+                    st.success(msg)
 
                     # Tabella completa
                     if show_table:
-                        st.markdown("### 📋 Dettaglio completo")
+                        st.markdown("### Dettaglio completo")
                         cols = ["tipo_viaggio", "voto_medio", "num_recensioni", "deviazione_std"]
                         if "ci95" in df_viaggi.columns:
                             cols.append("ci95")
                         st.dataframe(df_viaggi[cols], use_container_width=True, height=320)
 
         # ========= QUERY 4: ASIMMETRIA EMOTIVA (Lunghezza) =========
-        elif query_type == "📏 Lunghezza Recensioni":
-            st.subheader("📏 Asimmetria Emotiva: la delusione genera più testo?")
+        elif query_type == "Lunghezza Recensioni":
+            st.subheader("Asimmetria Emotiva: la delusione genera più testo?")
             st.markdown("""
             **Obiettivo**: misurare l'asimmetria emotiva in modo quantitativo.  
             Usiamo le word-count già presenti nel dataset (parte positiva vs negativa).  
@@ -1003,22 +1003,30 @@ elif page == "🧠 Insight Avanzati":
             - **% presenza testo** ⇒ quanto spesso le persone scrivono davvero una parte positiva/negativa
             """)
 
-            with st.expander("⚙️ Impostazioni", expanded=False):
+            with st.expander("Impostazioni", expanded=False):
                 show_table = st.checkbox("Mostra tabella completa", value=True)
 
-            if st.button("🚀 Analizza Comportamento Emotivo", type="primary"):
+            if st.button("Analizza Comportamento Emotivo", type="primary"):
                 with st.spinner("Calcolando asimmetria emotiva..."):
                     df_emo = gestore.query_lunghezza_recensioni(st.session_state.df_hotel).toPandas()
+                    # Clean emojis from backend
+                    if df_emo is not None and "score_bucket" in df_emo.columns:
+                        df_emo["score_bucket"] = df_emo["score_bucket"].replace({
+                            "< 5.0 (Arrabbiato)": "< 5.0 (Arrabbiato)",
+                            "5.0-7.5 (Deluso)": "5.0-7.5 (Deluso)",
+                            "7.5-9.0 (Soddisfatto)": "7.5-9.0 (Soddisfatto)",
+                            "> 9.0 (Felice)": "> 9.0 (Felice)"
+                        })
 
                 if df_emo is None or len(df_emo) == 0:
                     st.warning("Nessun dato trovato.")
                 else:
                     # --- Ordine logico bucket ---
                     ORDER = [
-                        "😠 < 5.0 (Arrabbiato)",
-                        "😐 5.0-7.5 (Deluso)",
-                        "🙂 7.5-9.0 (Soddisfatto)",
-                        "😍 > 9.0 (Felice)"
+                        "< 5.0 (Arrabbiato)",
+                        "5.0-7.5 (Deluso)",
+                        "7.5-9.0 (Soddisfatto)",
+                        "> 9.0 (Felice)"
                     ]
                     df_emo["score_bucket"] = df_emo["score_bucket"].astype(str)
                     df_emo["bucket_order"] = df_emo["score_bucket"].apply(lambda x: ORDER.index(x) if x in ORDER else 999)
@@ -1032,7 +1040,7 @@ elif page == "🧠 Insight Avanzati":
                     if "pct_has_positive" not in df_emo.columns:
                         df_emo["pct_has_positive"] = None
 
-                    st.markdown("### 📊 Risultati per fascia di voto")
+                    st.markdown("### Risultati per fascia di voto")
 
                     cols = st.columns(min(4, len(df_emo)))
                     for i, row in enumerate(df_emo.itertuples(index=False)):
@@ -1066,7 +1074,7 @@ elif page == "🧠 Insight Avanzati":
                     st.divider()
 
                     # --- Grafico con Altair  ---
-                    st.markdown("### 📉 Positive vs Negative: lunghezza media per fascia")
+                    st.markdown("### Positive vs Negative: lunghezza media per fascia")
                     st.caption("Confronto tra lunghezza media della parte positiva e negativa (parole).")
 
                     import altair as alt
@@ -1106,7 +1114,7 @@ elif page == "🧠 Insight Avanzati":
                     st.divider()
 
                     # --- Insight ---
-                    st.markdown("### 🧠 Insight")
+                    st.markdown("### Insight")
 
                     # Fascia con delta più alto = più sfogo negativo rispetto al positivo
                     idx_max = df_emo["delta_len_neg_minus_pos"].astype(float).idxmax()
@@ -1117,12 +1125,12 @@ elif page == "🧠 Insight Avanzati":
 
                     if float(max_row["delta_len_neg_minus_pos"]) > 10:
                         st.warning(
-                            f"⚠️ **Effetto sfogo**: nella fascia **{max_row['score_bucket']}** "
+                            f"**Effetto sfogo**: nella fascia **{max_row['score_bucket']}** "
                             f"la parte negativa è mediamente più lunga di **{max_row['delta_len_neg_minus_pos']:.1f} parole** "
                             f"rispetto alla positiva."
                         )
                     else:
-                        st.info("ℹ️ Nessuna asimmetria forte: le lunghezze positive/negative sono relativamente bilanciate.")
+                        st.info("Nessuna asimmetria forte: le lunghezze positive/negative sono relativamente bilanciate.")
 
                     st.caption(
                         f"Fascia più 'negativity-heavy': {max_row['score_bucket']} | "
@@ -1130,12 +1138,12 @@ elif page == "🧠 Insight Avanzati":
                     )
 
                     if show_table:
-                        st.markdown("### 📋 Tabella completa")
+                        st.markdown("### Tabella completa")
                         st.dataframe(df_emo, use_container_width=True, height=420)
 
         # ========= QUERY 5: AFFIDABILITÀ VOTO =========
         elif "Affidabilità Voto" in query_type:
-            st.subheader("📉 Affidabilità del Voto (Coerenza)")
+            st.subheader("Affidabilità del Voto (Coerenza)")
             st.markdown("""
             **Obiettivo**: stimare quanto il punteggio medio di un hotel sia “affidabile” misurando la dispersione dei voti.  
             **Metrica**: **deviazione standard (σ)** dei `Reviewer_Score`.
@@ -1143,11 +1151,11 @@ elif page == "🧠 Insight Avanzati":
             - **σ bassa** ⇒ hotel consistente (esperienza prevedibile)
             """)
 
-            with st.expander("⚙️ Impostazioni", expanded=False):
+            with st.expander("Impostazioni", expanded=False):
                 min_reviews = st.number_input("Min recensioni per hotel", 0, 1000000, 100, step=50)
                 top_k = st.slider("Top hotel da mostrare", 3, 50, 10)
 
-            if st.button("🚀 Analizza Affidabilità", type="primary"):
+            if st.button("Analizza Affidabilità", type="primary"):
                 with st.spinner("Calcolando dispersione voti..."):
                     df_std = gestore.query_affidabilita_voto(st.session_state.df_hotel).toPandas()
 
@@ -1168,7 +1176,7 @@ elif page == "🧠 Insight Avanzati":
                         # Ordina per più controversi
                         df_std = df_std.sort_values("stddev_reviewer_score", ascending=False)
 
-                        st.markdown("### 🔥 Hotel più controversi (σ alta)")
+                        st.markdown("### Hotel più controversi (σ alta)")
                         top = df_std.head(max(3, min(top_k, len(df_std))))
 
                         cols = st.columns(min(3, len(top)))
@@ -1186,7 +1194,7 @@ elif page == "🧠 Insight Avanzati":
 
                         st.divider()
 
-                        st.markdown("### 📈 Mappa: Qualità vs Affidabilità")
+                        st.markdown("### Mappa: Qualità vs Affidabilità")
                         st.caption("X = media voti, Y = deviazione standard. Dimensione = numero recensioni. Tooltip con dettagli.")
 
                         import altair as alt
@@ -1212,34 +1220,34 @@ elif page == "🧠 Insight Avanzati":
                         st.altair_chart(chart, use_container_width=True)
 
                         st.info(
-                            "💡 **Lettura**: punti più in alto ⇒ maggiore disaccordo tra clienti (hotel imprevedibile). "
+                            "**Lettura**: punti più in alto ⇒ maggiore disaccordo tra clienti (hotel imprevedibile). "
                             "Punti a destra e in basso ⇒ qualità alta e consistente."
                         )
 
-                        st.markdown("### 📋 Dettaglio completo")
+                        st.markdown("### Dettaglio completo")
                         # Evito .style: più stabile
                         st.dataframe(df_std.head(top_k), use_container_width=True, height=420)
 
         # ========= QUERY 6: HOTEL RISCHIOSI =========
         elif "Hotel Rischiosi" in query_type:
-            st.subheader("⚠️ Hotel 'Rischiosi' (Alta Media, Alto Rischio)")
+            st.subheader("Hotel 'Rischiosi' (Alta Media, Alto Rischio)")
             st.markdown("""
             **Obiettivo**: individuare hotel che sembrano eccellenti (media alta) ma nascondono una quota preoccupante di disastri (voti ≤ 4.0).  
             **Perché è utile?**: la media può “nascondere” una coda di esperienze pessime (es. pulizia, rumore, sicurezza, staff).
             """)
 
-            with st.expander("⚙️ Impostazioni", expanded=False):
+            with st.expander("Impostazioni", expanded=False):
                 min_reviews_ui = st.number_input("Min recensioni per hotel", 0, 1000000, 50, step=10)
                 min_avg_ui = st.slider("Soglia media (apparenza ottima)", 0.0, 10.0, 8.0, 0.1)
                 min_disaster_pct_ui = st.slider("Soglia % disastri (≤ 4.0)", 0.0, 50.0, 5.0, 0.5)
                 show_table_ui = st.checkbox("Mostra tabella completa", value=True)
 
-            if st.button("🚀 Scansiona Rischi Nascosti", type="primary"):
+            if st.button("Scansiona Rischi Nascosti", type="primary"):
                 with st.spinner("Cercando hotel rischiosi..."):
                     df_risky = gestore.query_hotel_rischiosi(st.session_state.df_hotel).toPandas()
 
                 if df_risky is None or len(df_risky) == 0:
-                    st.success("✅ Nessun hotel rischioso trovato con i criteri attuali.")
+                    st.success("Nessun hotel rischioso trovato con i criteri attuali.")
                 else:
                     # ---- Normalizzazione nomi colonne (compatibilità backend vecchio/nuovo) ----
                     # Backend nuovo: avg_hotel_score, risk_index, p05_score
@@ -1262,15 +1270,15 @@ elif page == "🧠 Insight Avanzati":
                     ].copy()
 
                     if len(df_risky) == 0:
-                        st.success("✅ Nessun hotel rischioso trovato con i criteri attuali.")
+                        st.success("Nessun hotel rischioso trovato con i criteri attuali.")
                     else:
                         # Ordina per rischio
                         df_risky = df_risky.sort_values(["risk_index", "disaster_pct"], ascending=[False, False])
 
-                        st.error(f"⚠️ Trovati **{len(df_risky)}** hotel 'ottimi' ma con rischio elevato!")
+                        st.error(f"Trovati **{len(df_risky)}** hotel 'ottimi' ma con rischio elevato!")
 
                         # ---- Top 3 ----
-                        st.markdown("### 🔥 Top 3 potenziali 'trappole'")
+                        st.markdown("### Top 3 potenziali 'trappole'")
                         cols = st.columns(min(3, len(df_risky)))
                         top_n = min(3, len(df_risky))
 
@@ -1288,15 +1296,15 @@ elif page == "🧠 Insight Avanzati":
                                     f"⭐ Avg hotel: {row['avg_hotel_score']:.2f} | "
                                     f"⭐ Avg reviewer: {row['mean_reviewer_score']:.2f} | "
                                     f"🧾 Review: {int(row['total_reviews'])} | "
-                                    f"💥 Disastri: {int(row['disaster_count'])}"
+                                    f"Disastri: {int(row['disaster_count'])}"
                                 )
                                 if pd.notna(row.get("p05_score", None)):
-                                    st.caption(f"📉 P05 score: {row['p05_score']:.2f}")
+                                    st.caption(f"P05 score: {row['p05_score']:.2f}")
 
                         st.divider()
 
                         # ---- Scatter robusto con Altair (color + size funzionano sempre) ----
-                        st.markdown("### 📉 Analisi visiva: ottimi ma pericolosi")
+                        st.markdown("### Analisi visiva: ottimi ma pericolosi")
                         st.caption("Asse X: media dei reviewer. Asse Y: % disastri (≤ 4.0). Dimensione: # recensioni. Colore: risk_index.")
 
                         import altair as alt
@@ -1324,13 +1332,13 @@ elif page == "🧠 Insight Avanzati":
                         st.altair_chart(chart, use_container_width=True)
 
                         st.info(
-                            "💡 **Lettura**: più in alto ⇒ maggiore probabilità di un’esperienza pessima. "
+                            "**Lettura**: più in alto ⇒ maggiore probabilità di un’esperienza pessima. "
                             "Il colore e la dimensione aiutano a distinguere rischi 'affidabili' (molte recensioni) da outlier."
                         )
 
                         # ---- Tabella completa ----
                         if show_table_ui:
-                            st.markdown("### 📋 Lista completa")
+                            st.markdown("### Lista completa")
                             show_cols = [
                                 "Hotel_Name", "avg_hotel_score", "mean_reviewer_score",
                                 "disaster_pct", "disaster_count", "total_reviews", "risk_index", "p05_score"
@@ -1343,7 +1351,7 @@ elif page == "🧠 Insight Avanzati":
 
         # ========= QUERY 7: EXPECTATION GAP =========
         elif "Expectation Gap" in query_type:
-            st.subheader("🤯 Expectation Gap (Realtà vs Aspettativa)")
+            st.subheader("Expectation Gap (Realtà vs Aspettativa)")
 
             st.markdown("""
             **Obiettivo**: misurare la delusione *relativa* (scarto tra voto dato e aspettativa media dell’hotel).  
@@ -1352,7 +1360,7 @@ elif page == "🧠 Insight Avanzati":
             - gap < 0 ⇒ esperienza peggiore delle aspettative
             """)
 
-            with st.expander("ℹ️ Guida alla lettura"):
+            with st.expander("Guida alla lettura"):
                 st.markdown("""
                 - **Gap medio**: indica se, in media, una fascia supera o disattende le aspettative.
                 - **% delusioni**: quante recensioni hanno gap < 0 (fallimento rispetto alle aspettative).
@@ -1361,19 +1369,27 @@ elif page == "🧠 Insight Avanzati":
                 """)
 
             # Parametri (optional, ma utili)
-            with st.expander("⚙️ Impostazioni analisi", expanded=False):
+            with st.expander("Impostazioni analisi", expanded=False):
                 min_reviews = st.number_input("Min recensioni per fascia (solo per stabilità statistica)", 0, 1000000, 0, step=100)
                 show_table = st.checkbox("Mostra tabella dati", value=True)
 
-            if st.button("🚀 Analizza il Gap", type="primary"):
+            if st.button("Analizza il Gap", type="primary"):
                 with st.spinner("Calcolo in corso..."):
                     df_gap = gestore.query_expectation_gap(st.session_state.df_hotel).toPandas()
+                    # Clean emojis from backend
+                    if df_gap is not None and "expectation_bucket" in df_gap.columns:
+                        df_gap["expectation_bucket"] = df_gap["expectation_bucket"].replace({
+                            "Economico (< 7.5)": "Economico (< 7.5)",
+                            "Standard (7.5-8.5)": "Standard (7.5-8.5)",
+                            "Premium (8.5-9.2)": "Premium (8.5-9.2)",
+                            "Luxury (> 9.2)": "Luxury (> 9.2)"
+                        })
 
                 if df_gap is None or len(df_gap) == 0:
                     st.warning("Nessun dato trovato.")
                 else:
                     # Assicura ordine logico (Economico → Standard → Premium → Luxury)
-                    ORDER = ["🥉 Economico (< 7.5)", "🥈 Standard (7.5-8.5)", "🥇 Premium (8.5-9.2)", "💎 Luxury (> 9.2)"]
+                    ORDER = ["Economico (< 7.5)", "Standard (7.5-8.5)", "Premium (8.5-9.2)", "Luxury (> 9.2)"]
                     df_gap["expectation_bucket"] = df_gap["expectation_bucket"].astype(str)
                     df_gap["bucket_order"] = df_gap["expectation_bucket"].apply(lambda x: ORDER.index(x) if x in ORDER else 999)
                     df_gap = df_gap.sort_values("bucket_order").drop(columns=["bucket_order"])
@@ -1384,7 +1400,7 @@ elif page == "🧠 Insight Avanzati":
                     if len(df_gap) == 0:
                         st.warning("Dopo il filtro, non restano fasce con abbastanza recensioni.")
                     else:
-                        st.markdown("### 📊 Risultati per fascia di prestigio")
+                        st.markdown("### Risultati per fascia di prestigio")
 
                         cols = st.columns(min(4, len(df_gap)))
                         for i, row in enumerate(df_gap.itertuples(index=False)):
@@ -1402,13 +1418,13 @@ elif page == "🧠 Insight Avanzati":
                                     delta="Gap medio",
                                     delta_color=delta_color
                                 )
-                                st.caption(f"📉 Delusioni: **{pct_del:.1f}%**")
+                                st.caption(f"Delusioni: **{pct_del:.1f}%**")
                                 st.progress(min(1.0, max(0.0, pct_del / 100.0)))
 
                         st.divider()
 
                         # Grafico serio con Altair (controllo completo)
-                        st.markdown("### 📉 Intensità della delusione (solo gap < 0)")
+                        st.markdown("### Intensità della delusione (solo gap < 0)")
                         st.caption("Media del gap condizionata al fatto che la recensione sia negativa: più è basso, più la delusione è profonda.")
 
                         import altair as alt
@@ -1431,7 +1447,7 @@ elif page == "🧠 Insight Avanzati":
                         st.altair_chart(chart, use_container_width=True)
 
                 # Insight robusto (senza assumere posizioni)
-                st.markdown("### 🧠 Insight")
+                st.markdown("### Insight")
 
                 # Trova fascia più severa (intensità più negativa) e più “morbida”
                 most_severe = df_gap.loc[df_gap["intensita_delusione_media"].idxmin()]
@@ -1452,12 +1468,12 @@ elif page == "🧠 Insight Avanzati":
                         f"(≈ **{mild_val:.2f}**)."
                     )
                 else:
-                    st.info("ℹ️ L'intensità della delusione è complessivamente simile tra le fasce.")
+                    st.info("L'intensità della delusione è complessivamente simile tra le fasce.")
 
                 # Tabella (facoltativa)
                 if show_table:
-                    st.markdown("### 📋 Dati aggregati")
+                    st.markdown("### Dati aggregati")
                     st.dataframe(df_gap, use_container_width=True)
 
     else:
-        st.info("💡 Carica i dati dalla sidebar per iniziare l'analisi.")
+        st.info("Carica i dati dalla sidebar per iniziare l'analisi.")
