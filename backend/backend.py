@@ -236,7 +236,7 @@ class GestoreBigData:
                 avg("voto_medio").alias("avg_voto"),#voto medio nel cluster
                 avg("num_recensioni").alias("avg_recensioni"),#numero medio di recensioni nel cluster
                 avg("perc_eccellenti").alias("avg_eccellenti"),#percentuale media di recensioni eccellenti nel cluster
-                avg(avg("menzioni_costruzione") + avg("menzioni_pulizia") + avg("menzioni_staff")).alias("avg_problemi")#percentuale media di menzioni di problemi nel cluster
+                (avg("menzioni_costruzione") + avg("menzioni_pulizia") + avg("menzioni_staff")).alias("avg_problemi")#percentuale media di menzioni di problemi nel cluster
             ) \
             .orderBy("cluster")
         
