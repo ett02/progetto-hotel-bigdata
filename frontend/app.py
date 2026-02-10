@@ -180,8 +180,10 @@ elif page == " Sentiment Analysis":
                     esempi_formatted = esempi.copy()
                     esempi_formatted['Label'] = esempi_formatted['label'].apply(lambda x: 'Pos' if x == 1 else 'Neg')
                     esempi_formatted['Predizione'] = esempi_formatted['prediction'].apply(lambda x: 'Pos' if x == 1 else 'Neg')
+                    # Converti DenseVector in lista e calcola la confidence
                     esempi_formatted['Confidence'] = esempi_formatted['probability'].apply(
-                        lambda x: f"{max(x):.2%}" if isinstance(x, (list, tuple)) else "N/A"
+                        lambda x: f"{max(x.toArray().tolist()) if hasattr(x, 'toArray') else max(x):.2%}" 
+                        if x is not None else "N/A"
                     )
                     esempi_formatted['Recensione (troncata)'] = esempi_formatted['review'].str[:100] + "..."
                     

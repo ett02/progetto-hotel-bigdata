@@ -146,7 +146,7 @@ class GestoreBigData:
         
         # conta distribuzione predizioni sul test set
         test_pred_dist = predizioni_test.groupBy("prediction").count().collect()# conta le predizioni per i due label 0,1
-        test_pred_counts = {int(row['prediction']): row['count'] for row in test_pred_dist}
+        test_pred_counts = {int(row['prediction']): row['count'] for row in test_pred_dist}# 
         
         # estrai esempi di recensioni classificate (per debugging/visualizzazione)
         esempi = predizioni_test.select("review", "label", "prediction", "probability") \
@@ -236,7 +236,7 @@ class GestoreBigData:
                 avg("voto_medio").alias("avg_voto"),#voto medio nel cluster
                 avg("num_recensioni").alias("avg_recensioni"),#numero medio di recensioni nel cluster
                 avg("perc_eccellenti").alias("avg_eccellenti"),#percentuale media di recensioni eccellenti nel cluster
-                (avg("menzioni_costruzione") + avg("menzioni_pulizia") + avg("menzioni_staff")).alias("avg_problemi")#percentuale media di menzioni di problemi nel cluster
+                ((avg("menzioni_costruzione") + avg("menzioni_pulizia") + avg("menzioni_staff")) / 3).alias("avg_problemi")#media delle medie delle menzioni di problemi nel cluster
             ) \
             .orderBy("cluster")
         
@@ -254,6 +254,7 @@ class GestoreBigData:
     def _interpreta_cluster(self, stats_df):
         #assegna nomi interpretativi ai cluster basandosi sulle statistiche, per renderlo più leggibile
         interpretations = {}
+        name_counts = {}  # Traccia quante volte ogni nome base è stato usato
         
         for _, row in stats_df.iterrows():
             cluster_id = int(row['cluster'])
@@ -262,17 +263,25 @@ class GestoreBigData:
             eccellenti = row['avg_eccellenti']
             problemi = row['avg_problemi']
             
-            # logica interpretativa
+            # logica interpretativa - determina il nome base
             if voto >= 8.5 and recensioni > 500:
-                nome = "🏆 Premium Hotels"
+                nome_base = "🏆 Premium Hotels"
             elif voto >= 8.0 and recensioni < 200:
-                nome = "💎 Hidden Gems"
+                nome_base = "💎 Hidden Gems"
             elif voto < 7.0 or problemi > 15:
-                nome = "📉 Budget/Problems"
+                nome_base = "📉 Budget/Problems"
             elif recensioni > 800:
-                nome = "🌟 Popular Mixed"
+                nome_base = "🌟 Popular Mixed"
             else:
-                nome = f"📊 Cluster {cluster_id}"
+                nome_base = f"📊 Cluster {cluster_id}"
+            
+            # Garantisce unicità: se il nome è già stato usato, aggiungi il cluster ID
+            if nome_base in name_counts.values():
+                nome = f"{nome_base} #{cluster_id}"
+            else:
+                nome = nome_base
+            
+            name_counts[cluster_id] = nome_base
             interpretations[cluster_id] = nome
         return interpretations
 
@@ -540,11 +549,11 @@ class GestoreBigData:
         #creaiamo un nuovo dataframe con le colonne che ci servono 
         df_viaggi = df_viaggi.withColumn(
             "tipo_viaggio",
-            when(col("tags_lc").contains("solo traveler"), "🚶 Solo")
-            .when(col("tags_lc").contains("family"), "👨‍👩‍👧‍👦 Famiglia")
-            .when(col("tags_lc").contains("group"), "👥 Gruppo")
-            .when(col("tags_lc").contains("couple"), "👫 Coppia")
-            .otherwise("❓ Altro")
+            when(col("tags_lc").contains("solo traveler"), " Solo")
+            .when(col("tags_lc").contains("family"), " Famiglia")
+            .when(col("tags_lc").contains("group"), " Gruppo")
+            .when(col("tags_lc").contains("couple"), " Coppia")
+            .otherwise(" Altro")
         )
         agg = (
             df_viaggi.groupBy("tipo_viaggio")
@@ -618,7 +627,8 @@ class GestoreBigData:
         # differenza tra lunghezza media recensioni negative e positive
         agg = agg.withColumn("delta_len_neg_minus_pos", col("avg_negative_length") - col("avg_positive_length"))
         # ratio solo se il denominatore è “abbastanza grande” ovvero selezioniamo un valore maggiore o uguale a 3 per le parole positive così da evitare valori insensati 
-        agg = agg.withColumn("negativity_ratio", when(col("avg_positive_length") >= 3.0, col("avg_negative_length") / col("avg_positive_length")).otherwise(lit(None)))
+        agg = agg.withColumn("negativity_ratio", when(col("avg_positive_length") >= 3.0, 
+                                                        col("avg_negative_length") / col("avg_positive_length")).otherwise(lit(None)))
         # arrotondamenti risultati per l'interfaccia grafica
         result = (
             agg.withColumn("avg_negative_length", round(col("avg_negative_length"), 2))
